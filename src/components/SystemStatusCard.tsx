@@ -7,66 +7,44 @@ interface SystemStatusCardProps {
 }
 
 export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({ telemetry }) => {
+  const stats = [
+    { icon: Zap, iconColor: 'text-amber-400', label: 'Throughput', value: telemetry.bidsPerSecond, unit: 'ops/sec', valueColor: 'text-white' },
+    { icon: Gauge, iconColor: 'text-emerald-400', label: 'Avg Latency', value: telemetry.averageLatencyMs, unit: 'ms', valueColor: 'text-emerald-300' },
+    { icon: Network, iconColor: 'text-cyan-400', label: 'Active Sockets', value: telemetry.activeSockets, unit: 'nodes', valueColor: 'text-cyan-300' },
+    { icon: Server, iconColor: 'text-purple-400', label: 'Lock Efficiency', value: `${telemetry.redisThroughput}%`, unit: 'atomic', valueColor: 'text-purple-300' },
+  ];
+
   return (
-    <div className="rounded-2xl bg-slate-900/90 border border-slate-800 p-5 shadow-xl">
-      <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-        <div className="flex items-center space-x-2">
-          <Cpu className="w-4 h-4 text-indigo-400" />
-          <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-            Engine Concurrency & Telemetry
+    <div className="relative overflow-hidden rounded-3xl glass-strong p-5 sm:p-6 shadow-2xl shadow-black/30">
+      <div className="absolute -top-8 -right-8 w-32 h-32 bg-indigo-500/8 rounded-full blur-2xl pointer-events-none" />
+
+      <div className="relative flex items-center justify-between pb-4 border-b border-white/5">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2.5 rounded-2xl bg-gradient-to-br from-indigo-400/20 to-purple-600/20 border border-indigo-400/15">
+            <Cpu className="w-4 h-4 text-indigo-300" />
+          </div>
+          <h2 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider">
+            System Telemetry
           </h2>
         </div>
-        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-950 text-indigo-400 border border-indigo-800/60">
-          Redis Lua Lock
+        <span className="text-[10px] font-mono px-2.5 py-1 rounded-full glass border border-indigo-400/20 text-indigo-300">
+          Redis Lua Engine
         </span>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-        
-        <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
-          <div className="flex items-center space-x-1.5 text-slate-400 text-xs font-mono">
-            <Zap className="w-3.5 h-3.5 text-amber-400" />
-            <span>Throughput</span>
+      <div className="relative grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+        {stats.map(({ icon: Icon, iconColor, label, value, unit, valueColor }) => (
+          <div key={label} className="p-3.5 rounded-2xl glass border border-white/5 hover:border-white/10 transition-all group">
+            <div className="flex items-center gap-1.5 text-slate-500 text-xs font-mono">
+              <Icon className={`w-3.5 h-3.5 ${iconColor} group-hover:scale-110 transition-transform`} />
+              <span>{label}</span>
+            </div>
+            <div className="mt-2.5 flex items-baseline gap-1.5">
+              <span className={`text-xl sm:text-2xl font-black font-mono ${valueColor}`}>{value}</span>
+              <span className="text-[10px] text-slate-600 font-mono">{unit}</span>
+            </div>
           </div>
-          <div className="mt-2 flex items-baseline space-x-1">
-            <span className="text-xl font-bold font-mono text-white">{telemetry.bidsPerSecond}</span>
-            <span className="text-[10px] text-slate-500 font-mono">ops/sec</span>
-          </div>
-        </div>
-
-        <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
-          <div className="flex items-center space-x-1.5 text-slate-400 text-xs font-mono">
-            <Gauge className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Avg Latency</span>
-          </div>
-          <div className="mt-2 flex items-baseline space-x-1">
-            <span className="text-xl font-bold font-mono text-emerald-400">{telemetry.averageLatencyMs}</span>
-            <span className="text-[10px] text-slate-500 font-mono">ms</span>
-          </div>
-        </div>
-
-        <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
-          <div className="flex items-center space-x-1.5 text-slate-400 text-xs font-mono">
-            <Network className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Active Sockets</span>
-          </div>
-          <div className="mt-2 flex items-baseline space-x-1">
-            <span className="text-xl font-bold font-mono text-cyan-400">{telemetry.activeSockets}</span>
-            <span className="text-[10px] text-slate-500 font-mono">nodes</span>
-          </div>
-        </div>
-
-        <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
-          <div className="flex items-center space-x-1.5 text-slate-400 text-xs font-mono">
-            <Server className="w-3.5 h-3.5 text-purple-400" />
-            <span>Lock Efficiency</span>
-          </div>
-          <div className="mt-2 flex items-baseline space-x-1">
-            <span className="text-xl font-bold font-mono text-purple-400">{telemetry.redisThroughput}%</span>
-            <span className="text-[10px] text-slate-500 font-mono">atomic</span>
-          </div>
-        </div>
-
+        ))}
       </div>
     </div>
   );

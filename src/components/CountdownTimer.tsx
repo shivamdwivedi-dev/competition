@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Clock, Flame } from 'lucide-react';
 
 interface CountdownTimerProps {
-  endTime: number; // Milliseconds timestamp from backend
+  endTime: number;
   status: 'UPCOMING' | 'LIVE' | 'ENDED' | 'PAUSED';
 }
 
@@ -23,7 +23,6 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ endTime, status 
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
       const milliseconds = Math.floor((diff % 1000) / 100);
-
       setTimeLeft({ hours, minutes, seconds, milliseconds, totalMs: diff });
     };
 
@@ -37,7 +36,7 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ endTime, status 
 
   if (isEnded) {
     return (
-      <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-rose-950/60 border border-rose-800/80 text-rose-300 font-mono text-xs uppercase font-bold tracking-wider shadow-rose-950 shadow-sm">
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl glass border border-rose-500/25 text-rose-300 font-mono text-xs font-bold tracking-wider">
         <Clock className="w-3.5 h-3.5 text-rose-400" />
         <span>Auction Closed</span>
       </div>
@@ -45,10 +44,10 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ endTime, status 
   }
 
   return (
-    <div className={`flex items-center space-x-2 sm:space-x-3 px-3 py-1.5 rounded-xl border transition-all ${
+    <div className={`flex items-center gap-2 sm:gap-3 px-3 py-2 rounded-xl border font-mono font-bold transition-all duration-300 ${
       isUrgent
-        ? 'bg-rose-950/70 border-rose-600/80 text-rose-300 animate-pulse shadow-lg shadow-rose-900/30 ring-1 ring-rose-500/50'
-        : 'bg-slate-900/90 border-slate-700/80 text-cyan-300'
+        ? 'glass border-rose-500/40 text-rose-300 ring-1 ring-rose-500/25 shadow-lg shadow-rose-500/15'
+        : 'glass border-white/10 text-cyan-200'
     }`}>
       {isUrgent ? (
         <Flame className="w-4 h-4 text-rose-400 animate-bounce flex-shrink-0" />
@@ -56,23 +55,23 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ endTime, status 
         <Clock className="w-4 h-4 text-cyan-400 flex-shrink-0" />
       )}
 
-      <div className="flex items-center font-mono font-bold tracking-tight space-x-0.5 sm:space-x-1 text-xs sm:text-base">
+      <div className="flex items-center tracking-tight space-x-0.5 sm:space-x-1 text-xs sm:text-sm">
         {timeLeft.hours > 0 && (
           <>
-            <span className="bg-slate-800/90 px-1.5 py-0.5 rounded text-white">{String(timeLeft.hours).padStart(2, '0')}</span>
-            <span className="text-slate-500">:</span>
+            <span className="glass border border-white/10 px-1.5 py-0.5 rounded-lg text-white">{String(timeLeft.hours).padStart(2, '0')}</span>
+            <span className="text-slate-500 text-sm">:</span>
           </>
         )}
-        <span className="bg-slate-800/90 px-1.5 py-0.5 rounded text-white">{String(timeLeft.minutes).padStart(2, '0')}</span>
-        <span className="text-slate-500">:</span>
-        <span className="bg-slate-800/90 px-1.5 py-0.5 rounded text-white">{String(timeLeft.seconds).padStart(2, '0')}</span>
-        <span className="text-slate-500">.</span>
+        <span className="glass border border-white/10 px-1.5 py-0.5 rounded-lg text-white">{String(timeLeft.minutes).padStart(2, '0')}</span>
+        <span className="text-slate-500 text-sm">:</span>
+        <span className="glass border border-white/10 px-1.5 py-0.5 rounded-lg text-white">{String(timeLeft.seconds).padStart(2, '0')}</span>
+        <span className="text-slate-600 text-sm">.</span>
         <span className="text-xs text-cyan-400 w-3">{timeLeft.milliseconds}</span>
       </div>
 
       {isUrgent && (
-        <span className="text-[9px] sm:text-[10px] font-bold text-rose-400 uppercase tracking-widest hidden xs:inline">
-          FINAL CALL
+        <span className="text-[9px] font-bold text-rose-400 uppercase tracking-widest hidden xs:inline">
+          FINAL
         </span>
       )}
     </div>

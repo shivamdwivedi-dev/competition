@@ -32,8 +32,13 @@ export function App() {
   } = useAuction();
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-slate-950 overflow-x-hidden">
-      
+    <div className="min-h-screen bg-[#060b18] text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-slate-950 overflow-x-hidden relative">
+
+      {/* Animated Background Orbs */}
+      <div className="orb orb-1" />
+      <div className="orb orb-2" />
+      <div className="orb orb-3" />
+
       {/* Top Navigation */}
       <Navbar
         isConnected={isConnected}
@@ -45,69 +50,74 @@ export function App() {
         onRefresh={() => retryConnection()}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        
-        {/* Backend Error / Connection Banner */}
+      {/* Main Content */}
+      <main className="relative flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-5 sm:space-y-6 z-10">
+
+        {/* Backend Error Banner */}
         {serverError && (
-          <div className="p-4 rounded-2xl bg-amber-950/70 border border-amber-600/70 text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xl">
-            <div className="flex items-center space-x-3">
-              <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0" />
+          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 backdrop-blur-md shadow-lg shadow-amber-500/5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-amber-500/15 flex-shrink-0">
+                <AlertTriangle className="w-4 h-4 text-amber-400" />
+              </div>
               <div>
-                <p className="font-bold text-sm">Authoritative Backend Notice</p>
-                <p className="text-xs text-amber-300/80 font-mono mt-0.5">{serverError}</p>
+                <p className="font-bold text-sm text-amber-200">Backend Notice</p>
+                <p className="text-xs text-amber-400/70 font-mono mt-0.5">{serverError}</p>
               </div>
             </div>
             <button
               onClick={() => retryConnection()}
-              className="px-3 py-1.5 rounded-xl bg-amber-900/80 hover:bg-amber-800 text-amber-100 text-xs font-mono font-bold flex items-center space-x-1.5 transition-colors cursor-pointer self-end sm:self-center"
+              className="px-4 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer border border-amber-500/25 hover:border-amber-400/40 self-end sm:self-center"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              <span>Retry Connection</span>
+              <span>Retry</span>
             </button>
           </div>
         )}
 
-        {/* Loading / Offline Connecting State */}
+        {/* Offline / Loading State */}
         {!auction ? (
-          <div className="py-20 flex flex-col items-center justify-center space-y-5 text-center px-4">
-            <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center shadow-2xl">
-              {isLoading ? (
-                <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
-              ) : (
-                <AlertTriangle className="w-8 h-8 text-amber-400" />
-              )}
+          <div className="py-24 flex flex-col items-center justify-center space-y-6 text-center px-4">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-cyan-400/20 to-indigo-600/20 blur-xl scale-110 pointer-events-none" />
+              <div className="relative w-20 h-20 rounded-3xl glass-strong border border-white/10 flex items-center justify-center shadow-2xl">
+                {isLoading ? (
+                  <Loader2 className="w-9 h-9 text-cyan-400 animate-spin" />
+                ) : (
+                  <AlertTriangle className="w-9 h-9 text-amber-400" />
+                )}
+              </div>
             </div>
-            <div className="max-w-md space-y-2">
-              <h3 className="text-base font-bold text-slate-200">
-                {isLoading ? 'Connecting to Authoritative Backend' : 'Waiting for Backend Connection'}
+            <div className="max-w-md space-y-2.5">
+              <h3 className="text-xl font-black text-white">
+                {isLoading ? 'Connecting to Backend...' : 'Waiting for Connection'}
               </h3>
-              <p className="font-mono text-xs text-slate-400 leading-relaxed">
-                Target Backend: <span className="text-cyan-400">http://localhost:5001</span><br />
-                Target Auction ID: <span className="text-slate-300 font-mono">{currentAuctionId || '8281326b-58ca-4f4a-9bb2-845927b0667a'}</span>
+              <p className="font-mono text-sm text-slate-400 leading-relaxed">
+                <span className="text-slate-500">Backend: </span>
+                <span className="text-cyan-400">http://localhost:5001</span>
               </p>
-              <p className="text-[11px] text-slate-500 font-mono">
-                Auto-reconnecting every 3.5 seconds...
+              <p className="text-[11px] text-slate-600 font-mono">
+                Auto-reconnecting every 3.5s
               </p>
             </div>
             <button
               onClick={() => retryConnection()}
-              className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono text-xs font-bold transition-colors cursor-pointer flex items-center space-x-2 shadow-lg shadow-cyan-500/20"
+              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-mono text-sm font-bold transition-all cursor-pointer flex items-center gap-2.5 shadow-xl shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-[1.02] active:scale-95"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Retry Connection Now</span>
+              <RefreshCw className="w-4 h-4" />
+              <span>Retry Now</span>
             </button>
           </div>
         ) : (
           <>
-            {/* Auction Product Header */}
+            {/* Auction Header */}
             <AuctionHeader auction={auction} />
 
-            {/* Core Layout Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
-              
-              {/* Left Column: Bidding Controls (7 Cols) */}
-              <div className="lg:col-span-7 space-y-4 sm:space-y-6">
+            {/* Main Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
+
+              {/* Left: Bid Controls */}
+              <div className="lg:col-span-7 space-y-5 sm:space-y-6">
                 <CurrentBidCard
                   auction={auction}
                   user={user}
@@ -115,7 +125,6 @@ export function App() {
                   outbidAlert={outbidAlert}
                   onDismissAlert={() => setOutbidAlert(false)}
                 />
-
                 <BidForm
                   auction={auction}
                   user={user}
@@ -125,8 +134,8 @@ export function App() {
                 />
               </div>
 
-              {/* Right Column: Live Feed (5 Cols) */}
-              <div className="lg:col-span-5 space-y-4 sm:space-y-6">
+              {/* Right: Live Feed */}
+              <div className="lg:col-span-5">
                 <LiveBidFeed
                   bids={bids}
                   currentUserId={user.id}
@@ -135,14 +144,14 @@ export function App() {
 
             </div>
 
-            {/* Telemetry Stats */}
+            {/* System Telemetry */}
             <SystemStatusCard telemetry={telemetry} />
           </>
         )}
 
       </main>
 
-      {/* Auction Winner Overlay Modal */}
+      {/* Winner Modal */}
       {auction && (
         <WinnerModal
           auction={auction}
@@ -152,8 +161,8 @@ export function App() {
       )}
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 py-4 text-center text-[11px] font-mono text-slate-500">
-        Team 4-WARRIORS • SYNORA Pitstop 01 • Real-Time Auction Engine
+      <footer className="relative z-10 border-t border-white/5 py-4 text-center text-[11px] font-mono text-slate-600">
+        Team 4-WARRIORS &nbsp;•&nbsp; SYNORA Pitstop 01 &nbsp;•&nbsp; Real-Time Auction Engine
       </footer>
 
     </div>

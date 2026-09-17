@@ -44,67 +44,71 @@ export const BidForm: React.FC<BidFormProps> = ({
   const isAuctionLive = auction.status === 'LIVE';
 
   return (
-    <div className="rounded-2xl bg-slate-900/90 border border-slate-800 p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-5">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <div className="p-2 rounded-xl bg-indigo-950/80 border border-indigo-800/60 text-indigo-400">
-            <Gavel className="w-4 h-4 sm:w-5 sm:h-5" />
+    <div className="relative overflow-hidden rounded-3xl glass-strong p-5 sm:p-6 space-y-5 shadow-2xl shadow-black/30">
+      {/* Subtle background accent */}
+      <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Header */}
+      <div className="relative flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-2xl bg-gradient-to-br from-indigo-400/20 to-purple-600/20 border border-indigo-400/20">
+            <Gavel className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-300" />
           </div>
           <div>
-            <h2 className="text-xs sm:text-sm font-bold text-white tracking-wide uppercase">
-              Instant Bidding Console
-            </h2>
-            <p className="text-[10px] text-slate-400 font-mono hidden sm:block">
-              Atomic Redis Lua Lock Execution
-            </p>
+            <h2 className="text-xs sm:text-sm font-bold text-white tracking-wide">Place Your Bid</h2>
+            <p className="text-[10px] text-slate-500 font-mono hidden sm:block">Atomic Redis Lua Settlement</p>
           </div>
         </div>
-
         <div className="text-right">
-          <span className="text-[10px] font-mono text-slate-500 uppercase block">User Profile</span>
-          <span className="text-xs font-mono font-bold text-cyan-400">{user.name}</span>
+          <span className="text-[10px] font-mono text-slate-500 uppercase block">Bidding as</span>
+          <span className="text-xs font-mono font-bold text-indigo-300">{user.name}</span>
         </div>
       </div>
 
       {/* Error Banner */}
       {lastError && (
-        <div className="p-3 rounded-xl bg-rose-950/90 border border-rose-600/90 text-rose-300 text-xs flex items-start space-x-2.5 shadow-lg shadow-rose-950/50">
-          <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
-          <div className="flex-1 font-mono break-words">
-            <span className="font-bold text-rose-200">BID REJECTED: </span>
-            <span>{lastError}</span>
+        <div className="relative p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-start gap-3 backdrop-blur-sm">
+          <div className="p-1.5 rounded-xl bg-rose-500/20 flex-shrink-0 mt-0.5">
+            <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
+          </div>
+          <div className="flex-1 font-mono text-xs break-words">
+            <span className="font-bold text-rose-300">BID REJECTED — </span>
+            <span className="text-rose-400/80">{lastError}</span>
           </div>
         </div>
       )}
 
-      {/* 1-Click Fast Bid Button */}
+      {/* 1-Click Quick Bid */}
       <button
         type="button"
         disabled={!isAuctionLive || isSubmitting}
         onClick={() => onSubmitBid()}
-        className={`w-full py-3.5 px-4 rounded-xl font-extrabold text-sm sm:text-base tracking-wide flex items-center justify-center space-x-2 sm:space-x-3 transition-all duration-200 ${
+        className={`relative w-full py-4 px-5 rounded-2xl font-extrabold text-sm sm:text-base tracking-wide flex items-center justify-center gap-3 transition-all duration-200 overflow-hidden min-h-[52px] cursor-pointer ${
           !isAuctionLive
-            ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-            : 'bg-gradient-to-r from-cyan-500 via-indigo-500 to-fuchsia-600 hover:from-cyan-400 hover:via-indigo-400 hover:to-fuchsia-500 text-white shadow-xl shadow-cyan-500/25 active:scale-[0.98] border border-cyan-400/30 cursor-pointer min-h-[48px]'
+            ? 'glass border border-white/5 text-slate-500 cursor-not-allowed'
+            : 'bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-600 hover:from-cyan-400 hover:via-indigo-400 hover:to-purple-500 text-white shadow-xl shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-[1.01] active:scale-[0.99] border border-white/10'
         }`}
       >
+        {isAuctionLive && !isSubmitting && (
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+        )}
         {isSubmitting ? (
           <>
             <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
-            <span>COMMITTING TO REDIS LUA...</span>
+            <span>Committing to Redis...</span>
           </>
         ) : (
           <>
-            <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-300 fill-yellow-300 flex-shrink-0" />
-            <span className="truncate">1-CLICK QUICK BID: ₹{minNextBid.toLocaleString()}</span>
-            <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+            <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-300 fill-yellow-200 flex-shrink-0" />
+            <span className="truncate">Quick Bid — ₹{minNextBid.toLocaleString()}</span>
+            <ArrowUpRight className="w-4 h-4 flex-shrink-0 opacity-80" />
           </>
         )}
       </button>
 
-      {/* Quick Increment Shortcuts */}
+      {/* Quick Increments */}
       <div>
-        <span className="text-[10px] sm:text-[11px] font-mono text-slate-400 uppercase tracking-wider block mb-2">
+        <span className="text-[10px] sm:text-[11px] font-mono text-slate-500 uppercase tracking-wider block mb-2.5">
           Quick Increments
         </span>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -114,7 +118,7 @@ export const BidForm: React.FC<BidFormProps> = ({
               type="button"
               disabled={!isAuctionLive || isSubmitting}
               onClick={() => handleQuickAdd(inc)}
-              className="py-2.5 px-2 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-slate-700 font-mono text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:border-cyan-500/50 cursor-pointer active:scale-95 min-h-[44px]"
+              className="py-2.5 px-2 rounded-xl glass hover:bg-white/10 text-slate-200 hover:text-white border border-white/8 hover:border-indigo-400/40 font-mono text-xs font-bold transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer active:scale-95 min-h-[44px]"
             >
               +₹{inc}
             </button>
@@ -122,15 +126,15 @@ export const BidForm: React.FC<BidFormProps> = ({
         </div>
       </div>
 
-      {/* Custom Bid Input Form */}
-      <form onSubmit={handleCustomSubmit} className="space-y-2 pt-2 border-t border-slate-800">
-        <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-mono text-slate-400">
-          <label className="uppercase tracking-wider">Custom Bid Amount</label>
-          <span>Min: <strong className="text-cyan-400">₹{minNextBid.toLocaleString()}</strong></span>
+      {/* Custom Bid Input */}
+      <form onSubmit={handleCustomSubmit} className="space-y-2.5 pt-1 border-t border-white/5">
+        <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-mono text-slate-500">
+          <label className="uppercase tracking-wider">Custom Amount</label>
+          <span>Min: <strong className="text-cyan-300">₹{minNextBid.toLocaleString()}</strong></span>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <div className="relative flex-1">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-mono font-bold">₹</span>
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-mono font-bold text-sm">₹</span>
             <input
               type="number"
               min={minNextBid}
@@ -138,20 +142,19 @@ export const BidForm: React.FC<BidFormProps> = ({
               value={customAmount}
               onChange={(e) => setCustomAmount(e.target.value)}
               disabled={!isAuctionLive || isSubmitting}
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-8 pr-3 py-2.5 text-white font-mono font-bold text-sm focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 disabled:opacity-50 min-h-[44px]"
+              className="w-full glass border border-white/10 rounded-xl pl-9 pr-3 py-3 text-white font-mono font-bold text-sm focus:outline-none focus:border-cyan-400/60 focus:ring-1 focus:ring-cyan-400/30 disabled:opacity-40 min-h-[48px] placeholder:text-slate-600 transition-all"
               placeholder={String(minNextBid)}
             />
           </div>
           <button
             type="submit"
             disabled={!isAuctionLive || isSubmitting}
-            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-mono text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:border-cyan-400 cursor-pointer active:scale-95 min-h-[44px]"
+            className="px-6 py-3 rounded-xl glass hover:bg-white/10 border border-white/10 hover:border-cyan-400/40 text-white font-mono text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer active:scale-95 min-h-[48px]"
           >
             Place Bid
           </button>
         </div>
       </form>
-
     </div>
   );
 };
