@@ -52,7 +52,7 @@ if end_time and end_time > 0 and now >= end_time then
         status = "REJECTED",
         reason = "AUCTION_ENDED",
         currentBid = highest_bid > 0 and highest_bid or starting_price,
-        highestBidder = highest_bidder,
+        highestBidder = (highest_bidder and highest_bidder ~= "") and highest_bidder or nil,
         endTime = end_time
     })
 end
@@ -60,15 +60,13 @@ end
 -- 5. Compare bid amount
 -- If no bids placed yet, new_bid must be >= starting_price
 -- If a bid was placed, new_bid must be strictly > highest_bid
-local min_acceptable = highest_bid > 0 and highest_bid or (starting_price > 0 and (starting_price - 0.0001) or 0)
-
 if highest_bid > 0 then
     if new_bid <= highest_bid then
         return cjson.encode({
             status = "REJECTED",
             reason = "BID_TOO_LOW",
             currentBid = highest_bid,
-            highestBidder = highest_bidder
+            highestBidder = (highest_bidder and highest_bidder ~= "") and highest_bidder or nil
         })
     end
 else

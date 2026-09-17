@@ -99,6 +99,10 @@ async function persistAuction(auction) {
 // Asynchronously record bid audit
 async function persistBidAudit(bidRecord) {
   inMemoryStore.bidsAudit.push(bidRecord);
+  // Cap in-memory audit buffer to last 10,000 items to prevent RAM exhaustion under load
+  if (inMemoryStore.bidsAudit.length > 10000) {
+    inMemoryStore.bidsAudit.splice(0, inMemoryStore.bidsAudit.length - 10000);
+  }
 
   if (pool && isConnected) {
     try {

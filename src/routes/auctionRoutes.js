@@ -1,18 +1,61 @@
 const express = require('express');
 const router = express.Router();
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const auctionService = require('../services/auctionService');
 const { getAuditBids } = require('../config/db');
 
-// POST /api/auctions - Create a new auction
-router.post('/', async (req, res, next) => {
+// Configure upload directory
+const uploadDir = path.join(__dirname, '../../public/uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname) || '.jpg';
+    cb(null, 'item-' + uniqueSuffix + ext);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+});
+
+// Middleware helper that handles multer upload optionally without breaking JSON requests
+function optionalUpload(req, res, next) {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ success: false, error: err.message });
+    }
+    next();
+  });
+}
+
+// POST /api/auctions/upload - Standalone image upload endpoint
+router.post('/upload', optionalUpload, (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, error: 'No image file uploaded' });
+  }
+  const imageUrl = `/uploads/${req.file.filename}`;
+  res.status(201).json({ success: true, imageUrl, filename: req.file.filename });
+});
+
+// POST /api/auctions - Create/Host a new auction (accepts JSON or multipart/form-data with item image)
+router.post('/', optionalUpload, async (req, res, next) => {
   try {
-    const { title, startingPrice, durationSeconds, endTime } = req.body;
-    const auction = await auctionService.createAuction({
-      title,
-      startingPrice,
-      durationSeconds,
-      endTime,
-    });
+    const payload = { ...req.body };
+    if (req.file) {
+      payload.imageUrl = `/uploads/${req.file.filename}`;
+    }
+
+    const auction = await auctionService.createAuction(payload);
 
     res.status(201).json({
       success: true,

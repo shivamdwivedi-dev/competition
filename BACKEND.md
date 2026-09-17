@@ -42,17 +42,23 @@
 }
 ```
 
-### 2.2. Create Auction
+### 2.2. Create / Host Auction
 `POST /api/auctions`
 
-**Request Body:**
+Accepts either `application/json` or `multipart/form-data` (with file upload under field `image`).
+
+**Request Body (JSON example):**
 ```json
 {
-  "title": "Vintage Mechanical Watch",
+  "name": "Vintage Mechanical Watch",
   "startingPrice": 500,
-  "durationSeconds": 300
+  "duration": 300,
+  "description": "Mint condition 1982 mechanical watch",
+  "imageUrl": "https://images.unsplash.com/photo-1523275335684-37898b6baf30",
+  "userId": "user_host_shivam"
 }
 ```
+*(Also supports `title`, `durationSeconds`, or file upload with `FormData`)*
 
 **Response (`201 Created`):**
 ```json
@@ -61,16 +67,25 @@
   "data": {
     "id": "7b686d0b-2e92-48df-ba09-53e7d6929a59",
     "title": "Vintage Mechanical Watch",
+    "name": "Vintage Mechanical Watch",
     "startingPrice": 500,
-    "highestBid": 0,
+    "highestBid": 500,
     "highestBidder": null,
     "endTime": 1773900300000,
     "createdAt": 1773900000000,
     "timeRemainingMs": 300000,
-    "isEnded": false
+    "isEnded": false,
+    "imageUrl": "https://images.unsplash.com/photo-1523275335684-37898b6baf30",
+    "description": "Mint condition 1982 mechanical watch",
+    "createdBy": "user_host_shivam"
   }
 }
 ```
+
+### 2.2.1. Standalone Image Upload (Optional)
+`POST /api/auctions/upload`
+- `multipart/form-data` with field `image`
+- Response: `{ "success": true, "imageUrl": "/uploads/item-12345.jpg" }`
 
 ### 2.3. Get Auction Details & Live State
 `GET /api/auctions/:id`
