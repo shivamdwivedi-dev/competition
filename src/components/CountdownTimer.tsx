@@ -31,7 +31,7 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ endTime, status 
     return () => clearInterval(interval);
   }, [endTime]);
 
-  const isUrgent = timeLeft.totalMs > 0 && timeLeft.totalMs < 1000 * 60 * 2;
+  const isUrgent = status === 'LIVE' && timeLeft.totalMs > 0 && timeLeft.totalMs < 1000 * 60 * 2;
   const isEnded = status === 'ENDED' || timeLeft.totalMs <= 0;
 
   if (isEnded) {

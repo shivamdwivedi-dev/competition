@@ -2,11 +2,10 @@ import type { AuctionItem, Bid, SystemTelemetry } from '../types/auction';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-// Configurable endpoint routes for easy adjustment with backend
+// Configurable endpoint routes - easily updated once backend routes are finalized
 export const API_ROUTES = {
   getAuction: (id: string) => `${API_BASE}/auctions/${id}`,
   getBids: (id: string) => `${API_BASE}/auctions/${id}/bids`,
-  // Arya's endpoint: POST /api/bids or legacy POST /api/auctions/:id/bid
   postBid: () => `${API_BASE}/bids`,
   postBidLegacy: (id: string) => `${API_BASE}/auctions/${id}/bid`,
   getTelemetry: () => `${API_BASE}/telemetry`,
@@ -16,41 +15,41 @@ export const apiService = {
   async getAuctionDetails(auctionId: string): Promise<AuctionItem> {
     try {
       const res = await fetch(API_ROUTES.getAuction(auctionId));
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
       const data = await res.json();
       return {
         id: data.id || data.auctionId || auctionId,
-        title: data.title || 'Cyberpunk Genesis NFT #0042',
-        description: data.description || 'Ultra-rare generative digital asset with quantum encryption signature.',
-        imageUrl: data.imageUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80',
-        startingPrice: data.startingPrice ?? 500,
-        reservePrice: data.reservePrice ?? 2500,
-        minIncrement: data.minIncrement ?? 50,
-        currentHighestBid: data.currentHighestBid ?? data.highestBid ?? 1250,
-        highestBidderId: data.highestBidderId ?? data.highestBidder ?? 'bidder-titan-9',
-        highestBidderName: data.highestBidderName ?? (typeof data.highestBidder === 'string' ? data.highestBidder : 'Titan_9'),
-        startTime: data.startTime ? new Date(data.startTime).getTime() : Date.now() - 1000 * 60 * 15,
-        endTime: data.endTime ? new Date(data.endTime).getTime() : Date.now() + 1000 * 60 * 8,
+        title: data.title || 'Quantum Overdrive GPU Cluster - 8x H100',
+        description: data.description || 'Enterprise grade AI acceleration cluster with liquid cooling manifold and sub-millisecond interconnect.',
+        imageUrl: data.imageUrl || 'https://images.unsplash.com/photo-1591488320449-011701bb6704?auto=format&fit=crop&w=1200&q=80',
+        startingPrice: data.startingPrice ?? 5000,
+        reservePrice: data.reservePrice ?? 12000,
+        minIncrement: data.minIncrement ?? 100,
+        currentHighestBid: data.currentHighestBid ?? data.highestBid ?? 7400,
+        highestBidderId: data.highestBidderId ?? data.highestBidder ?? 'bidder-synora-core',
+        highestBidderName: data.highestBidderName ?? (typeof data.highestBidder === 'string' ? data.highestBidder : 'NeuralByte_AI'),
+        startTime: data.startTime ? new Date(data.startTime).getTime() : Date.now() - 1000 * 60 * 12,
+        endTime: data.endTime ? new Date(data.endTime).getTime() : Date.now() + 1000 * 60 * 5,
         status: data.status || 'LIVE',
-        totalBidsCount: data.totalBidsCount ?? data.totalBids ?? 24,
+        totalBidsCount: data.totalBidsCount ?? data.totalBids ?? 38,
       };
-    } catch (err) {
-      console.warn('API getAuctionDetails using fallback mock:', err);
+    } catch {
+      // Offline fallback mock data for local testing
       return {
         id: auctionId,
-        title: 'Cyberpunk Genesis NFT #0042',
-        description: 'Ultra-rare generative digital asset with quantum encryption signature.',
-        imageUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80',
-        startingPrice: 500,
-        reservePrice: 2500,
-        minIncrement: 50,
-        currentHighestBid: 1250,
-        highestBidderId: 'bidder-titan-9',
-        highestBidderName: 'Titan_9',
-        startTime: Date.now() - 1000 * 60 * 15,
-        endTime: Date.now() + 1000 * 60 * 8,
+        title: 'Quantum Overdrive GPU Cluster - 8x H100',
+        description: 'Enterprise grade AI acceleration cluster with liquid cooling manifold and sub-millisecond interconnect.',
+        imageUrl: 'https://images.unsplash.com/photo-1591488320449-011701bb6704?auto=format&fit=crop&w=1200&q=80',
+        startingPrice: 5000,
+        reservePrice: 12000,
+        minIncrement: 100,
+        currentHighestBid: 7400,
+        highestBidderId: 'bidder-synora-core',
+        highestBidderName: 'NeuralByte_AI',
+        startTime: Date.now() - 1000 * 60 * 12,
+        endTime: Date.now() + 1000 * 60 * 5,
         status: 'LIVE',
-        totalBidsCount: 24,
+        totalBidsCount: 38,
       };
     }
   },
@@ -58,7 +57,7 @@ export const apiService = {
   async getBidHistory(auctionId: string): Promise<Bid[]> {
     try {
       const res = await fetch(API_ROUTES.getBids(auctionId));
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
       const rawBids = await res.json();
       if (Array.isArray(rawBids)) {
         return rawBids.map((b: any, index: number) => ({
@@ -67,26 +66,26 @@ export const apiService = {
           bidderId: b.bidderId || b.userId || 'usr-anon',
           bidderName: b.bidderName || b.userName || b.userId || 'Bidder',
           amount: Number(b.amount || b.bidAmount || 0),
-          timestamp: b.timestamp ? new Date(b.timestamp).getTime() : Date.now() - index * 5000,
+          timestamp: b.timestamp ? new Date(b.timestamp).getTime() : Date.now() - index * 6000,
           status: b.status || 'ACCEPTED',
           latencyMs: b.latencyMs,
+          reason: b.reason,
         }));
       }
       return [];
     } catch {
+      // Clean starting audit history for local development
       return [
-        { id: 'b-1', auctionId, bidderId: 'usr-1', bidderName: 'AlphaTrader', amount: 950, timestamp: Date.now() - 40000, status: 'ACCEPTED' },
-        { id: 'b-2', auctionId, bidderId: 'usr-2', bidderName: 'NeonRider', amount: 1000, timestamp: Date.now() - 32000, status: 'ACCEPTED' },
-        { id: 'b-3', auctionId, bidderId: 'usr-3', bidderName: 'CyberViper', amount: 1100, timestamp: Date.now() - 25000, status: 'ACCEPTED' },
-        { id: 'b-4', auctionId, bidderId: 'usr-4', bidderName: 'QuantumX', amount: 1150, timestamp: Date.now() - 14000, status: 'ACCEPTED' },
-        { id: 'b-5', auctionId, bidderId: 'bidder-titan-9', bidderName: 'Titan_9', amount: 1250, timestamp: Date.now() - 6000, status: 'ACCEPTED' },
+        { id: 'b-5', auctionId, bidderId: 'bidder-synora-core', bidderName: 'NeuralByte_AI', amount: 7400, timestamp: Date.now() - 5000, status: 'ACCEPTED', latencyMs: 3 },
+        { id: 'b-4', auctionId, bidderId: 'usr-quantum', bidderName: 'QuantumX', amount: 7300, timestamp: Date.now() - 18000, status: 'ACCEPTED', latencyMs: 5 },
+        { id: 'b-3', auctionId, bidderId: 'usr-slow', bidderName: 'SlowTrader', amount: 7100, timestamp: Date.now() - 25000, status: 'REJECTED', reason: 'Outpaced by higher bid', latencyMs: 12 },
+        { id: 'b-2', auctionId, bidderId: 'usr-neon', bidderName: 'NeonRider', amount: 7100, timestamp: Date.now() - 32000, status: 'ACCEPTED', latencyMs: 4 },
+        { id: 'b-1', auctionId, bidderId: 'usr-alpha', bidderName: 'AlphaTrader', amount: 6800, timestamp: Date.now() - 48000, status: 'ACCEPTED', latencyMs: 6 },
       ];
     }
   },
 
-  // Supports Arya's POST /api/bids with { auctionId, userId, amount }
   async placeBid(auctionId: string, amount: number, userId: string, userName?: string): Promise<Bid> {
-    // Primary attempt with Arya's POST /api/bids contract
     const payload = {
       auctionId,
       userId,
@@ -95,36 +94,32 @@ export const apiService = {
       timestamp: Date.now(),
     };
 
-    try {
-      const res = await fetch(API_ROUTES.postBid(), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+    const res = await fetch(API_ROUTES.postBid(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
 
-      if (!res.ok) {
-        // Attempt legacy endpoint if /api/bids returns 404
-        if (res.status === 404) {
-          const legacyRes = await fetch(API_ROUTES.postBidLegacy(auctionId), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          });
-          if (!legacyRes.ok) {
-            const errData = await legacyRes.json().catch(() => ({}));
-            throw new Error(errData.message || 'Bid rejected by server');
-          }
-          return await legacyRes.json();
+    if (!res.ok) {
+      if (res.status === 404) {
+        // Fallback to legacy endpoint if /api/bids is 404
+        const legacyRes = await fetch(API_ROUTES.postBidLegacy(auctionId), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!legacyRes.ok) {
+          const errData = await legacyRes.json().catch(() => ({}));
+          throw new Error(errData.message || 'Bid rejected by server');
         }
-
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || 'Bid rejected by server');
+        return await legacyRes.json();
       }
 
-      return await res.json();
-    } catch (err: any) {
-      throw new Error(err.message || 'Network error while placing bid');
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || 'Bid rejected by server');
     }
+
+    return await res.json();
   },
 
   async getTelemetry(): Promise<SystemTelemetry> {
@@ -134,10 +129,10 @@ export const apiService = {
       return await res.json();
     } catch {
       return {
-        bidsPerSecond: 184,
-        activeSockets: 48,
-        averageLatencyMs: 4.8,
-        redisThroughput: 98.4,
+        bidsPerSecond: 142,
+        activeSockets: 24,
+        averageLatencyMs: 3.6,
+        redisThroughput: 99.4,
         serverTime: Date.now(),
       };
     }

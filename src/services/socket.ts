@@ -1,19 +1,19 @@
 import { io, Socket } from 'socket.io-client';
 import type { Bid, SystemTelemetry } from '../types/auction';
 
-// Socket Event Names Configuration - easily adaptable to Arya's backend changes
+// Socket Event Names Configuration - easily updated once backend confirms
 export const SOCKET_EVENTS = {
   // Client -> Server
-  CLIENT_JOIN_AUCTION: 'join:auction',       // Arya's format
-  CLIENT_JOIN_AUCTION_LEGACY: 'joinAuction', // Legacy alias
-  CLIENT_PLACE_BID: 'bid:place',             // Modern format
-  CLIENT_PLACE_BID_LEGACY: 'placeBid',       // Legacy alias
+  CLIENT_JOIN_AUCTION: 'join:auction',
+  CLIENT_JOIN_AUCTION_LEGACY: 'joinAuction',
+  CLIENT_PLACE_BID: 'bid:place',
+  CLIENT_PLACE_BID_LEGACY: 'placeBid',
   CLIENT_PING: 'ping_server',
 
   // Server -> Client
-  SERVER_BID_UPDATE: 'bid:update',           // Arya's format: { auctionId, highestBid, highestBidder, timestamp }
-  SERVER_HIGHEST_BID_UPDATED: 'highestBidUpdated', // Legacy alias
-  SERVER_BID_UPDATED: 'bidUpdated',          // Legacy alias
+  SERVER_BID_UPDATE: 'bid:update',
+  SERVER_HIGHEST_BID_UPDATED: 'highestBidUpdated',
+  SERVER_BID_UPDATED: 'bidUpdated',
   SERVER_BID_ACCEPTED: 'bidAccepted',
   SERVER_BID_REJECTED: 'bidRejected',
   SERVER_AUCTION_ENDED: 'auctionEnded',
@@ -50,35 +50,31 @@ class SocketService {
         transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionAttempts: Infinity,
-        reconnectionDelay: 1000,
+        reconnectionDelay: 2000,
         reconnectionDelayMax: 5000,
-        timeout: 10000,
+        timeout: 8000,
+        autoConnect: true,
       });
 
       this.socket.on('connect', () => {
         this.isConnecting = false;
-        console.log('⚡ Socket connected to backend:', this.socket?.id);
       });
 
-      this.socket.on('connect_error', (err) => {
+      this.socket.on('connect_error', () => {
         this.isConnecting = false;
-        console.warn('Socket connection retry (backend starting):', err.message);
+        // Quiet offline handling - avoids crashing or console spamming
       });
     }
 
     return this.socket!;
   }
 
-  // Join auction room emitting both Arya's format { auctionId } and legacy string
   joinAuctionRoom(auctionId: string) {
     if (!this.socket) return;
-    // Arya's contract: join:auction with { auctionId }
     this.socket.emit(SOCKET_EVENTS.CLIENT_JOIN_AUCTION, { auctionId });
-    // Legacy support
     this.socket.emit(SOCKET_EVENTS.CLIENT_JOIN_AUCTION_LEGACY, auctionId);
   }
 
-  // Submit bid via socket emitting Arya's format { auctionId, userId, amount }
   emitBid(
     auctionId: string,
     amount: number,
@@ -96,7 +92,6 @@ class SocketService {
       timestamp: Date.now(),
     };
 
-    // Emit on both channels for maximum compatibility
     this.socket.emit(SOCKET_EVENTS.CLIENT_PLACE_BID, payload, callback);
     this.socket.emit(SOCKET_EVENTS.CLIENT_PLACE_BID_LEGACY, payload, callback);
   }

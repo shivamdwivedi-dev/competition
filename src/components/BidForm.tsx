@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Gavel, AlertCircle, Zap, ArrowUpRight, Loader2 } from 'lucide-react';
 import type { AuctionItem, UserProfile } from '../types/auction';
 
@@ -21,11 +21,18 @@ export const BidForm: React.FC<BidFormProps> = ({
   const [customAmount, setCustomAmount] = useState<string>(String(minNextBid));
   const quickIncrements = [auction.minIncrement, auction.minIncrement * 2, auction.minIncrement * 5, auction.minIncrement * 10];
 
+  // Keep custom input in sync with minimum required bid
+  useEffect(() => {
+    setCustomAmount(String(auction.currentHighestBid + auction.minIncrement));
+  }, [auction.currentHighestBid, auction.minIncrement]);
+
   const handleCustomSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const val = parseFloat(customAmount);
     if (!isNaN(val)) {
       onSubmitBid(val);
+    } else {
+      onSubmitBid(minNextBid);
     }
   };
 
@@ -49,7 +56,7 @@ export const BidForm: React.FC<BidFormProps> = ({
               Instant Bidding Console
             </h2>
             <p className="text-[11px] text-slate-400 font-mono">
-              Optimistic Execution with Millisecond Redis Rollback
+              Optimistic Execution with Millisecond Local Validation
             </p>
           </div>
         </div>
@@ -60,13 +67,18 @@ export const BidForm: React.FC<BidFormProps> = ({
         </div>
       </div>
 
+      {/* Clear Rejection / Error Alert Banner */}
       {lastError && (
-        <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-600/80 text-rose-300 text-xs flex items-center space-x-2">
+        <div className="p-3.5 rounded-xl bg-rose-950/90 border border-rose-600/90 text-rose-300 text-xs flex items-center space-x-2.5 shadow-lg shadow-rose-950/50 animate-shake">
           <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
-          <span>{lastError}</span>
+          <div className="flex-1 font-mono">
+            <span className="font-bold text-rose-200">BID REJECTED: </span>
+            <span>{lastError}</span>
+          </div>
         </div>
       )}
 
+      {/* 1-Click Fast Bid Button */}
       <button
         type="button"
         disabled={!isAuctionLive || isSubmitting}
@@ -74,13 +86,13 @@ export const BidForm: React.FC<BidFormProps> = ({
         className={`w-full py-4 px-6 rounded-xl font-extrabold text-base tracking-wide flex items-center justify-center space-x-3 transition-all duration-200 ${
           !isAuctionLive
             ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-            : 'bg-gradient-to-r from-cyan-500 via-indigo-500 to-fuchsia-600 hover:from-cyan-400 hover:via-indigo-400 hover:to-fuchsia-500 text-white shadow-xl shadow-cyan-500/25 active:scale-[0.98] border border-cyan-400/30'
+            : 'bg-gradient-to-r from-cyan-500 via-indigo-500 to-fuchsia-600 hover:from-cyan-400 hover:via-indigo-400 hover:to-fuchsia-500 text-white shadow-xl shadow-cyan-500/25 active:scale-[0.98] border border-cyan-400/30 cursor-pointer'
         }`}
       >
         {isSubmitting ? (
           <>
             <Loader2 className="w-5 h-5 animate-spin" />
-            <span>LOCKING BID ON REDIS...</span>
+            <span>COMMITTING BID...</span>
           </>
         ) : (
           <>
@@ -91,6 +103,7 @@ export const BidForm: React.FC<BidFormProps> = ({
         )}
       </button>
 
+      {/* Quick Increment Shortcuts */}
       <div>
         <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block mb-2">
           Quick Jump Increments
@@ -102,7 +115,7 @@ export const BidForm: React.FC<BidFormProps> = ({
               type="button"
               disabled={!isAuctionLive || isSubmitting}
               onClick={() => handleQuickAdd(inc)}
-              className="py-2 px-2 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-slate-700 font-mono text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:border-cyan-500/50"
+              className="py-2.5 px-2 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-slate-700 font-mono text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:border-cyan-500/50 cursor-pointer active:scale-95"
             >
               +${inc}
             </button>
@@ -110,10 +123,16 @@ export const BidForm: React.FC<BidFormProps> = ({
         </div>
       </div>
 
+      {/* Custom Bid Input Form */}
       <form onSubmit={handleCustomSubmit} className="space-y-3 pt-2 border-t border-slate-800">
-        <label className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block">
-          Custom Bid Amount
-        </label>
+        <div className="flex items-center justify-between">
+          <label className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block">
+            Custom Bid Amount
+          </label>
+          <span className="text-[10px] font-mono text-slate-500">
+            Min allowed: <strong className="text-cyan-400">${minNextBid.toLocaleString()}</strong>
+          </span>
+        </div>
         <div className="flex gap-2">
           <div className="relative flex-1">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-mono font-bold">$</span>
@@ -131,7 +150,7 @@ export const BidForm: React.FC<BidFormProps> = ({
           <button
             type="submit"
             disabled={!isAuctionLive || isSubmitting}
-            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-mono text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:border-cyan-400"
+            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-mono text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:border-cyan-400 cursor-pointer active:scale-95"
           >
             Place Bid
           </button>
