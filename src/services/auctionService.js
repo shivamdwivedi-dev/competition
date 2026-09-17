@@ -1,8 +1,9 @@
 const { v4: uuidv4 } = require('uuid');
 const redis = require('../config/redis');
 const { persistAuction, inMemoryStore } = require('../config/db');
+const { broadcastAuctionCreated } = require('../sockets/auctionSocket');
 
-async function createAuction({ title, startingPrice, durationSeconds, endTime }) {
+async function createAuction({ title, startingPrice, durationSeconds, endTime, imageUrl, description }) {
   if (!title || typeof title !== 'string' || title.trim() === '') {
     throw new Error('Title is required and must be a non-empty string');
   }
@@ -30,11 +31,19 @@ async function createAuction({ title, startingPrice, durationSeconds, endTime })
 
   const auctionId = uuidv4();
   const auctionKey = `auction:${auctionId}`;
+  const itemImageUrl = imageUrl && typeof imageUrl === 'string' && imageUrl.trim() !== ''
+    ? imageUrl.trim()
+    : 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?auto=format&fit=crop&w=1200&q=80';
+  const itemDescription = description && typeof description === 'string' && description.trim() !== ''
+    ? description.trim()
+    : 'Live auction item managed atomically by Redis Lua script on Port 5001.';
 
   // Store in Redis Hash
   await redis.hmset(auctionKey, {
     id: auctionId,
     title: title.trim(),
+    description: itemDescription,
+    image_url: itemImageUrl,
     starting_price: numStartingPrice.toString(),
     highest_bid: '0',
     highest_bidder: '',
@@ -48,6 +57,8 @@ async function createAuction({ title, startingPrice, durationSeconds, endTime })
   const auctionData = {
     id: auctionId,
     title: title.trim(),
+    description: itemDescription,
+    imageUrl: itemImageUrl,
     startingPrice: numStartingPrice,
     highestBid: 0,
     highestBidder: null,
@@ -56,6 +67,9 @@ async function createAuction({ title, startingPrice, durationSeconds, endTime })
     timeRemainingMs: Math.max(0, computedEndTime - now),
     isEnded: false,
   };
+
+  // Broadcast to all connected clients immediately
+  broadcastAuctionCreated(auctionData);
 
   // Asynchronously persist to database
   persistAuction(auctionData).catch((err) => {
@@ -100,6 +114,8 @@ async function getAuction(auctionId) {
   return {
     id: data.id || auctionId,
     title: data.title,
+    description: data.description || 'Live auction item managed atomically by Redis Lua script on Port 5001.',
+    imageUrl: data.image_url || data.imageUrl || 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?auto=format&fit=crop&w=1200&q=80',
     startingPrice,
     highestBid: highestBid > 0 ? highestBid : startingPrice,
     highestBidder: data.highest_bidder || null,

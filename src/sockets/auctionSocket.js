@@ -55,7 +55,17 @@ function broadcastBidUpdate(payload) {
   });
 }
 
+// Broadcast new auction creation to all connected clients
+function broadcastAuctionCreated(auction) {
+  if (!ioInstance) {
+    console.warn('[Socket.IO] ioInstance not initialized. Skipping auction:created broadcast.');
+    return;
+  }
+  ioInstance.emit('auction:created', auction);
+}
+
 module.exports = {
   initSocketIO,
   broadcastBidUpdate,
+  broadcastAuctionCreated,
 };

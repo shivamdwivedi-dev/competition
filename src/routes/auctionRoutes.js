@@ -6,12 +6,14 @@ const { getAuditBids } = require('../config/db');
 // POST /api/auctions - Create a new auction
 router.post('/', async (req, res, next) => {
   try {
-    const { title, startingPrice, durationSeconds, endTime } = req.body;
+    const { title, startingPrice, durationSeconds, endTime, imageUrl, description } = req.body;
     const auction = await auctionService.createAuction({
       title,
       startingPrice,
       durationSeconds,
       endTime,
+      imageUrl,
+      description,
     });
 
     res.status(201).json({
