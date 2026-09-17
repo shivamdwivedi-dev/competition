@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AuctionItem, Bid, SystemTelemetry, UserProfile } from '../types/auction';
 import { apiService } from '../services/api';
-import { socketService } from '../services/socket';
+import { socketService, SOCKET_EVENTS, type RawBidUpdatePayload } from '../services/socket';
 import { soundFX } from '../utils/audio';
 
 const INITIAL_AUCTION: AuctionItem = {
@@ -47,7 +47,7 @@ export function useAuction(auctionId: string = 'auction-synora-01') {
   const simulationIntervalRef = useRef<number | null>(null);
   const roundtripStartRef = useRef<number>(0);
 
-  // Initial Load
+  // Initial Load from REST
   useEffect(() => {
     let mounted = true;
     apiService.getAuctionDetails(auctionId).then((data) => {
@@ -61,46 +61,71 @@ export function useAuction(auctionId: string = 'auction-synora-01') {
     };
   }, [auctionId]);
 
-  // Socket setup
+  // Socket setup with multi-event normalization
   useEffect(() => {
     const socket = socketService.connect();
 
     const onConnect = () => {
       setIsConnected(true);
-      socket.emit('joinAuction', auctionId);
+      socketService.joinAuctionRoom(auctionId);
     };
 
     const onDisconnect = () => {
       setIsConnected(false);
     };
 
-    const onHighestBidUpdated = (payload: {
-      auctionId: string;
-      highestBid: number;
-      highestBidderId: string;
-      highestBidderName: string;
-      totalBids: number;
-    }) => {
-      if (payload.auctionId === auctionId) {
-        setAuction((prev) => {
-          if (prev.highestBidderId === user.id && payload.highestBidderId !== user.id) {
-            setOutbidAlert(true);
-            soundFX.playBidOutbid();
-          } else if (payload.highestBidderId === user.id) {
-            soundFX.playBidAccepted();
-          }
-          return {
-            ...prev,
-            currentHighestBid: payload.highestBid,
-            highestBidderId: payload.highestBidderId,
-            highestBidderName: payload.highestBidderName,
-            totalBidsCount: payload.totalBids || prev.totalBidsCount + 1,
-          };
-        });
+    // Unified handler for Arya's `bid:update` and legacy `highestBidUpdated` / `bidUpdated`
+    const handleNormalizedBidUpdate = (raw: RawBidUpdatePayload) => {
+      const eventAuctionId = raw.auctionId || auctionId;
+      if (eventAuctionId !== auctionId) return;
 
-        setHighBidFlash(true);
-        setTimeout(() => setHighBidFlash(false), 800);
+      const highestBid = raw.highestBid ?? raw.amount ?? 0;
+      let bidderId: string = raw.highestBidderId || '';
+      let bidderName: string = raw.highestBidderName || '';
+
+      if (typeof raw.highestBidder === 'string') {
+        bidderId = raw.highestBidder;
+        bidderName = raw.highestBidder;
+      } else if (raw.highestBidder && typeof raw.highestBidder === 'object') {
+        bidderId = raw.highestBidder.id || bidderId;
+        bidderName = raw.highestBidder.name || bidderName || bidderId;
       }
+
+      setAuction((prev) => {
+        const finalBid = highestBid > 0 ? highestBid : prev.currentHighestBid;
+        const finalBidderId = bidderId || prev.highestBidderId;
+        const finalBidderName = bidderName || prev.highestBidderName;
+
+        if (prev.highestBidderId === user.id && finalBidderId !== user.id) {
+          setOutbidAlert(true);
+          soundFX.playBidOutbid();
+        } else if (finalBidderId === user.id) {
+          soundFX.playBidAccepted();
+        }
+
+        return {
+          ...prev,
+          currentHighestBid: finalBid,
+          highestBidderId: finalBidderId,
+          highestBidderName: finalBidderName,
+          totalBidsCount: raw.totalBids || prev.totalBidsCount + 1,
+        };
+      });
+
+      // Also append to live bid audit trail
+      const newBidEntry: Bid = {
+        id: `bid-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        auctionId,
+        bidderId: bidderId || 'bidder',
+        bidderName: bidderName || 'Bidder',
+        amount: highestBid,
+        timestamp: raw.timestamp ? new Date(raw.timestamp).getTime() : Date.now(),
+        status: 'ACCEPTED',
+      };
+      setBids((prev) => [newBidEntry, ...prev.slice(0, 49)]);
+
+      setHighBidFlash(true);
+      setTimeout(() => setHighBidFlash(false), 800);
     };
 
     const onBidAccepted = (bid: Bid) => {
@@ -114,13 +139,13 @@ export function useAuction(auctionId: string = 'auction-synora-01') {
       setTimeout(() => setLastBidError(null), 4000);
     };
 
-    const onAuctionEnded = (data: { winnerId: string; winnerName: string; winningBid: number }) => {
+    const onAuctionEnded = (data: any) => {
       setAuction((prev) => ({
         ...prev,
         status: 'ENDED',
-        highestBidderId: data.winnerId,
-        highestBidderName: data.winnerName,
-        currentHighestBid: data.winningBid,
+        highestBidderId: data.winnerId || data.winner || prev.highestBidderId,
+        highestBidderName: data.winnerName || data.winner || prev.highestBidderName,
+        currentHighestBid: data.winningBid || data.amount || prev.currentHighestBid,
       }));
       soundFX.playHammer();
     };
@@ -131,21 +156,27 @@ export function useAuction(auctionId: string = 'auction-synora-01') {
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
-    socket.on('highestBidUpdated', onHighestBidUpdated);
-    socket.on('bidAccepted', onBidAccepted);
-    socket.on('bidRejected', onBidRejected);
-    socket.on('auctionEnded', onAuctionEnded);
-    socket.on('systemMetrics', onSystemMetrics);
+
+    // Register listeners for Arya's `bid:update` and aliases
+    socket.on(SOCKET_EVENTS.SERVER_BID_UPDATE, handleNormalizedBidUpdate);
+    socket.on(SOCKET_EVENTS.SERVER_HIGHEST_BID_UPDATED, handleNormalizedBidUpdate);
+    socket.on(SOCKET_EVENTS.SERVER_BID_UPDATED, handleNormalizedBidUpdate);
+
+    socket.on(SOCKET_EVENTS.SERVER_BID_ACCEPTED, onBidAccepted);
+    socket.on(SOCKET_EVENTS.SERVER_BID_REJECTED, onBidRejected);
+    socket.on(SOCKET_EVENTS.SERVER_AUCTION_ENDED, onAuctionEnded);
+    socket.on(SOCKET_EVENTS.SERVER_SYSTEM_METRICS, onSystemMetrics);
+    socket.on(SOCKET_EVENTS.SERVER_TELEMETRY, onSystemMetrics);
 
     if (socket.connected) {
       setIsConnected(true);
-      socket.emit('joinAuction', auctionId);
+      socketService.joinAuctionRoom(auctionId);
     }
 
     const pingInterval = setInterval(() => {
       if (socket.connected) {
         roundtripStartRef.current = performance.now();
-        socket.emit('ping_server', { clientTime: Date.now() });
+        socket.emit(SOCKET_EVENTS.CLIENT_PING, { clientTime: Date.now() });
       }
     }, 4000);
 
@@ -153,15 +184,18 @@ export function useAuction(auctionId: string = 'auction-synora-01') {
       clearInterval(pingInterval);
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
-      socket.off('highestBidUpdated', onHighestBidUpdated);
-      socket.off('bidAccepted', onBidAccepted);
-      socket.off('bidRejected', onBidRejected);
-      socket.off('auctionEnded', onAuctionEnded);
-      socket.off('systemMetrics', onSystemMetrics);
+      socket.off(SOCKET_EVENTS.SERVER_BID_UPDATE, handleNormalizedBidUpdate);
+      socket.off(SOCKET_EVENTS.SERVER_HIGHEST_BID_UPDATED, handleNormalizedBidUpdate);
+      socket.off(SOCKET_EVENTS.SERVER_BID_UPDATED, handleNormalizedBidUpdate);
+      socket.off(SOCKET_EVENTS.SERVER_BID_ACCEPTED, onBidAccepted);
+      socket.off(SOCKET_EVENTS.SERVER_BID_REJECTED, onBidRejected);
+      socket.off(SOCKET_EVENTS.SERVER_AUCTION_ENDED, onAuctionEnded);
+      socket.off(SOCKET_EVENTS.SERVER_SYSTEM_METRICS, onSystemMetrics);
+      socket.off(SOCKET_EVENTS.SERVER_TELEMETRY, onSystemMetrics);
     };
   }, [auctionId, user.id]);
 
-  // Place Bid Action
+  // Place Bid Action (via Socket or REST fallback)
   const submitBid = useCallback(
     async (customAmount?: number) => {
       if (auction.status !== 'LIVE') return;
@@ -185,15 +219,11 @@ export function useAuction(auctionId: string = 'auction-synora-01') {
 
       const socket = socketService.getSocket();
       if (socket?.connected) {
-        socket.emit(
-          'placeBid',
-          {
-            auctionId,
-            amount: targetAmount,
-            bidderId: user.id,
-            bidderName: user.name,
-            timestamp: Date.now(),
-          },
+        socketService.emitBid(
+          auctionId,
+          targetAmount,
+          user.id,
+          user.name,
           (ack) => {
             setIsSubmitting(false);
             const latency = Math.round(performance.now() - start);

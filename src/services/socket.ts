@@ -1,29 +1,45 @@
 import { io, Socket } from 'socket.io-client';
 import type { Bid, SystemTelemetry } from '../types/auction';
 
-export interface ServerToClientEvents {
-  highestBidUpdated: (payload: { auctionId: string; highestBid: number; highestBidderId: string; highestBidderName: string; totalBids: number; timestamp: number }) => void;
-  bidAccepted: (bid: Bid) => void;
-  bidRejected: (data: { reason: string; attemptedBid: number; currentHighest: number }) => void;
-  auctionEnded: (data: { auctionId: string; winnerId: string; winnerName: string; winningBid: number; endedAt: number }) => void;
-  systemMetrics: (telemetry: SystemTelemetry) => void;
-  pong_server: (data: { clientTime: number; serverTime: number }) => void;
-}
+// Socket Event Names Configuration - easily adaptable to Arya's backend changes
+export const SOCKET_EVENTS = {
+  // Client -> Server
+  CLIENT_JOIN_AUCTION: 'join:auction',       // Arya's format
+  CLIENT_JOIN_AUCTION_LEGACY: 'joinAuction', // Legacy alias
+  CLIENT_PLACE_BID: 'bid:place',             // Modern format
+  CLIENT_PLACE_BID_LEGACY: 'placeBid',       // Legacy alias
+  CLIENT_PING: 'ping_server',
 
-export interface ClientToServerEvents {
-  joinAuction: (auctionId: string) => void;
-  leaveAuction: (auctionId: string) => void;
-  placeBid: (data: { auctionId: string; amount: number; bidderId: string; bidderName: string; timestamp: number }, callback?: (ack: { success: boolean; message?: string }) => void) => void;
-  ping_server: (data: { clientTime: number }) => void;
+  // Server -> Client
+  SERVER_BID_UPDATE: 'bid:update',           // Arya's format: { auctionId, highestBid, highestBidder, timestamp }
+  SERVER_HIGHEST_BID_UPDATED: 'highestBidUpdated', // Legacy alias
+  SERVER_BID_UPDATED: 'bidUpdated',          // Legacy alias
+  SERVER_BID_ACCEPTED: 'bidAccepted',
+  SERVER_BID_REJECTED: 'bidRejected',
+  SERVER_AUCTION_ENDED: 'auctionEnded',
+  SERVER_SYSTEM_METRICS: 'systemMetrics',
+  SERVER_TELEMETRY: 'telemetry',
+  SERVER_PONG: 'pong_server',
+};
+
+export interface RawBidUpdatePayload {
+  auctionId?: string;
+  highestBid?: number;
+  amount?: number;
+  highestBidder?: string | { id?: string; name?: string };
+  highestBidderId?: string;
+  highestBidderName?: string;
+  totalBids?: number;
+  timestamp?: number | string;
 }
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 
 class SocketService {
-  private socket: Socket<ServerToClientEvents, ClientToServerEvents> | null = null;
+  private socket: Socket | null = null;
   private isConnecting: boolean = false;
 
-  connect(): Socket<ServerToClientEvents, ClientToServerEvents> {
+  connect(): Socket {
     if (this.socket?.connected) {
       return this.socket;
     }
@@ -41,16 +57,48 @@ class SocketService {
 
       this.socket.on('connect', () => {
         this.isConnecting = false;
-        console.log('⚡ Socket connected:', this.socket?.id);
+        console.log('⚡ Socket connected to backend:', this.socket?.id);
       });
 
       this.socket.on('connect_error', (err) => {
         this.isConnecting = false;
-        console.warn('Socket connection warning (backend starting):', err.message);
+        console.warn('Socket connection retry (backend starting):', err.message);
       });
     }
 
     return this.socket!;
+  }
+
+  // Join auction room emitting both Arya's format { auctionId } and legacy string
+  joinAuctionRoom(auctionId: string) {
+    if (!this.socket) return;
+    // Arya's contract: join:auction with { auctionId }
+    this.socket.emit(SOCKET_EVENTS.CLIENT_JOIN_AUCTION, { auctionId });
+    // Legacy support
+    this.socket.emit(SOCKET_EVENTS.CLIENT_JOIN_AUCTION_LEGACY, auctionId);
+  }
+
+  // Submit bid via socket emitting Arya's format { auctionId, userId, amount }
+  emitBid(
+    auctionId: string,
+    amount: number,
+    userId: string,
+    userName: string,
+    callback?: (ack: { success: boolean; message?: string }) => void
+  ) {
+    if (!this.socket) return;
+    const payload = {
+      auctionId,
+      userId,
+      amount,
+      bidderId: userId,
+      bidderName: userName,
+      timestamp: Date.now(),
+    };
+
+    // Emit on both channels for maximum compatibility
+    this.socket.emit(SOCKET_EVENTS.CLIENT_PLACE_BID, payload, callback);
+    this.socket.emit(SOCKET_EVENTS.CLIENT_PLACE_BID_LEGACY, payload, callback);
   }
 
   disconnect() {
@@ -61,7 +109,7 @@ class SocketService {
     }
   }
 
-  getSocket() {
+  getSocket(): Socket | null {
     return this.socket;
   }
 }
