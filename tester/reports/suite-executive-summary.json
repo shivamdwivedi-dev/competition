@@ -1,5 +1,5 @@
 {
-  "totalTimeSec": "7.14",
+  "totalTimeSec": "7.24",
   "summary": [
     {
       "scenarioKey": "A",
@@ -9,9 +9,9 @@
       "accepted": 86,
       "rejected": 14,
       "errors": 0,
-      "throughput": 2622.26,
-      "avgLatency": 5.16,
-      "p95Latency": 10.67,
+      "throughput": 2209.9,
+      "avgLatency": 6.39,
+      "p95Latency": 16.19,
       "anomalies": 0,
       "status": "PASS"
     },
@@ -23,9 +23,9 @@
       "accepted": 901,
       "rejected": 99,
       "errors": 0,
-      "throughput": 6644.3,
-      "avgLatency": 14.46,
-      "p95Latency": 42.55,
+      "throughput": 6179.41,
+      "avgLatency": 15.33,
+      "p95Latency": 47.16,
       "anomalies": 0,
       "status": "PASS"
     },
@@ -37,9 +37,9 @@
       "accepted": 4501,
       "rejected": 499,
       "errors": 0,
-      "throughput": 9658.06,
-      "avgLatency": 49.99,
-      "p95Latency": 167.57,
+      "throughput": 9076.62,
+      "avgLatency": 53.06,
+      "p95Latency": 187.32,
       "anomalies": 0,
       "status": "PASS"
     },
@@ -51,9 +51,9 @@
       "accepted": 401,
       "rejected": 599,
       "errors": 0,
-      "throughput": 7622.72,
-      "avgLatency": 24.86,
-      "p95Latency": 70.49,
+      "throughput": 6663.71,
+      "avgLatency": 28.29,
+      "p95Latency": 80.48,
       "anomalies": 0,
       "status": "PASS"
     },
@@ -65,9 +65,9 @@
       "accepted": 26,
       "rejected": 174,
       "errors": 0,
-      "throughput": 5499.01,
-      "avgLatency": 3.56,
-      "p95Latency": 14.35,
+      "throughput": 5518.23,
+      "avgLatency": 3.45,
+      "p95Latency": 18.98,
       "anomalies": 0,
       "status": "PASS"
     },
@@ -79,9 +79,9 @@
       "accepted": 0,
       "rejected": 100,
       "errors": 0,
-      "throughput": 4395.12,
-      "avgLatency": 4.34,
-      "p95Latency": 14.86,
+      "throughput": 4160.22,
+      "avgLatency": 4.37,
+      "p95Latency": 15.48,
       "anomalies": 0,
       "status": "PASS"
     }

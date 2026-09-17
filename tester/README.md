@@ -13,6 +13,10 @@ This testing framework is designed to verify the reliability, atomicity, and thr
 - **Exact real throughput** (`completed requests / elapsed seconds`).
 - **Sub-millisecond to low-millisecond response latency**.
 
+> [!NOTE]
+> **Benchmarking Disclaimer:**
+> Any performance numbers measured against `mock-backend.js` are strictly for test-harness verification, pipeline validation, and race-detector demonstration. They do **not** represent the real performance of Arya's live Node.js + Express + Redis + PostgreSQL backend. Official performance numbers will be recorded only when the live backend is running.
+
 ---
 
 ## 2. Quick Start & Prerequisites

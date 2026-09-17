@@ -96,9 +96,9 @@ function calculatePercentiles(latencies) {
   const sum = sorted.reduce((acc, val) => acc + val, 0);
   const avg = sum / sorted.length;
 
-  const p50 = sorted[Math.floor(sorted.length * 0.50)];
-  const p95 = sorted[Math.floor(sorted.length * 0.95)];
-  const p99 = sorted[Math.floor(sorted.length * 0.99)];
+  const p50 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.50))];
+  const p95 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))];
+  const p99 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.99))];
 
   return {
     min: parseFloat(min.toFixed(2)),
