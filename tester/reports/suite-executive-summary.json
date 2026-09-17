@@ -1,0 +1,89 @@
+{
+  "totalTimeSec": "7.14",
+  "summary": [
+    {
+      "scenarioKey": "A",
+      "title": "TEST A — NORMAL BIDDING",
+      "requests": 100,
+      "concurrency": 15,
+      "accepted": 86,
+      "rejected": 14,
+      "errors": 0,
+      "throughput": 2622.26,
+      "avgLatency": 5.16,
+      "p95Latency": 10.67,
+      "anomalies": 0,
+      "status": "PASS"
+    },
+    {
+      "scenarioKey": "B",
+      "title": "TEST B — HIGH CONCURRENCY",
+      "requests": 1000,
+      "concurrency": 100,
+      "accepted": 901,
+      "rejected": 99,
+      "errors": 0,
+      "throughput": 6644.3,
+      "avgLatency": 14.46,
+      "p95Latency": 42.55,
+      "anomalies": 0,
+      "status": "PASS"
+    },
+    {
+      "scenarioKey": "C",
+      "title": "TEST C — 5000 REQUEST STRESS TEST",
+      "requests": 5000,
+      "concurrency": 500,
+      "accepted": 4501,
+      "rejected": 499,
+      "errors": 0,
+      "throughput": 9658.06,
+      "avgLatency": 49.99,
+      "p95Latency": 167.57,
+      "anomalies": 0,
+      "status": "PASS"
+    },
+    {
+      "scenarioKey": "D",
+      "title": "TEST D — SAME AUCTION / RACE CONDITION",
+      "requests": 1000,
+      "concurrency": 200,
+      "accepted": 401,
+      "rejected": 599,
+      "errors": 0,
+      "throughput": 7622.72,
+      "avgLatency": 24.86,
+      "p95Latency": 70.49,
+      "anomalies": 0,
+      "status": "PASS"
+    },
+    {
+      "scenarioKey": "E",
+      "title": "TEST E — INVALID & MALFORMED BIDS",
+      "requests": 200,
+      "concurrency": 20,
+      "accepted": 26,
+      "rejected": 174,
+      "errors": 0,
+      "throughput": 5499.01,
+      "avgLatency": 3.56,
+      "p95Latency": 14.35,
+      "anomalies": 0,
+      "status": "PASS"
+    },
+    {
+      "scenarioKey": "F",
+      "title": "TEST F — AUCTION ENDED",
+      "requests": 100,
+      "concurrency": 20,
+      "accepted": 0,
+      "rejected": 100,
+      "errors": 0,
+      "throughput": 4395.12,
+      "avgLatency": 4.34,
+      "p95Latency": 14.86,
+      "anomalies": 0,
+      "status": "PASS"
+    }
+  ]
+}

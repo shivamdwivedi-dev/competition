@@ -1,0 +1,29 @@
+{
+  "name": "synora-auction-tester",
+  "version": "1.0.0",
+  "description": "4-WARRIORS Load Testing, Concurrency Verification & Performance Harness for SYNORA Hackathon",
+  "main": "load-test.js",
+  "scripts": {
+    "mock": "node mock-backend.js",
+    "mock:bug": "node mock-backend.js --race-bug",
+    "test:normal": "node scenarios.js a",
+    "test:concurrency": "node scenarios.js b",
+    "test:stress": "node scenarios.js c",
+    "test:race": "node scenarios.js d",
+    "test:invalid": "node scenarios.js e",
+    "test:ended": "node scenarios.js f",
+    "test:all": "node scenarios.js all",
+    "test:custom": "node load-test.js",
+    "test:backend": "node scenarios.js all --url http://localhost:5000/api/bids"
+  },
+  "keywords": [
+    "synora",
+    "load-testing",
+    "concurrency",
+    "redis-lua",
+    "qa",
+    "performance"
+  ],
+  "author": "Prince (4-WARRIORS QA Lead)",
+  "license": "ISC"
+}
