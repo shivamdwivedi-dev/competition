@@ -2,6 +2,7 @@
 const express = require('express');
 const router  = express.Router();
 const { placeBid, getAuction, seedAuction } = require('../services/auction');
+const { recordBidAsync } = require('../db/audit');
 
 // ── POST /api/bids ────────────────────────────────────────────────────────────
 // Body: { auctionId: string, bidderId: string, amount: number }
@@ -34,6 +35,14 @@ router.post('/', async (req, res) => {
         ts            : result.ts,
       });
     }
+
+    // ── Non-blocking asynchronous audit log to PostgreSQL/Supabase ──────────
+    recordBidAsync({
+      auctionId: result.auctionId,
+      bidderId: result.bidderId,
+      amount: result.amount,
+      status: result.status,
+    });
 
     const httpStatus = result.status === 'ACCEPTED' ? 200 : 400;
     return res.status(httpStatus).json(result);
