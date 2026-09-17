@@ -41,6 +41,11 @@ async function createAuction(payload) {
     throw new Error('startingPrice must be a non-negative number');
   }
 
+  const MAX_ALLOWED_PRICE = 10000000000;
+  if (numStartingPrice > MAX_ALLOWED_PRICE || numStartingPrice > Number.MAX_SAFE_INTEGER) {
+    throw new Error('startingPrice must not exceed ₹1,000 Crores');
+  }
+
   const now = Date.now();
   let computedEndTime = null;
 

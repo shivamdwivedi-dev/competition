@@ -35,6 +35,8 @@ async function processBid({ auctionId, userId, amount }) {
     };
   }
 
+  const MAX_ALLOWED_BID = 10000000000; // ₹1,000 Crores maximum system limit
+
   const numAmount = Number(amount);
   if (isNaN(numAmount) || !isFinite(numAmount) || numAmount <= 0) {
     return {
@@ -43,6 +45,16 @@ async function processBid({ auctionId, userId, amount }) {
       status: 'REJECTED',
       reason: 'INVALID_BID',
       message: 'amount must be a valid positive number',
+    };
+  }
+
+  if (numAmount > MAX_ALLOWED_BID || numAmount > Number.MAX_SAFE_INTEGER) {
+    return {
+      success: false,
+      statusCode: 400,
+      status: 'REJECTED',
+      reason: 'BID_EXCEEDS_MAX_LIMIT',
+      message: 'Bid amount must be a positive number under ₹1,000 Crores.',
     };
   }
 

@@ -37,12 +37,13 @@ local starting_price = tonumber(data[4]) or 0
 local highest_bid = tonumber(raw_highest_bid) or 0
 
 -- 3. Validate new bid input
-if not new_bid or new_bid <= 0 then
+local MAX_ALLOWED_BID = 10000000000 -- 1000 Crores maximum system limit
+if not new_bid or new_bid <= 0 or new_bid > MAX_ALLOWED_BID then
     return cjson.encode({
         status = "REJECTED",
-        reason = "INVALID_BID",
+        reason = (new_bid and new_bid > MAX_ALLOWED_BID) and "BID_EXCEEDS_MAX_LIMIT" or "INVALID_BID",
         currentBid = highest_bid > 0 and highest_bid or starting_price,
-        highestBidder = highest_bidder
+        highestBidder = (highest_bidder and highest_bidder ~= "") and highest_bidder or nil
     })
 end
 

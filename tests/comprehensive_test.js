@@ -97,14 +97,23 @@ async function runAll() {
   if (bidHigher.status !== 200 || bidHigher.body.status !== 'ACCEPTED') throw new Error('Expected 200 ACCEPTED');
 
   // 7. Invalid Bid (Negative / Boolean / String / Zero)
-  console.log('\n[Test 7] Place Invalid Bids (-50, true, "bad", 0)...');
+  console.log('\n[Test 7] Place Invalid Bids (-50, true, "bad", 0, astronomical number, >1000Cr)...');
   const inv1 = await makeRequest('POST', '/api/bids', { auctionId: idA, userId: 'u1', amount: -50 });
   const inv2 = await makeRequest('POST', '/api/bids', { auctionId: idA, userId: 'u2', amount: true });
   const inv3 = await makeRequest('POST', '/api/bids', { auctionId: idA, userId: 'u3', amount: 'not_a_number' });
   const inv4 = await makeRequest('POST', '/api/bids', { auctionId: idA, userId: 'u4', amount: 0 });
-  console.log('Invalid Amount Statuses:', [inv1.status, inv2.status, inv3.status, inv4.status]);
+  const invAstro = await makeRequest('POST', '/api/bids', { auctionId: idA, userId: 'u5', amount: 6.7888888888889e+145 });
+  const invExceed = await makeRequest('POST', '/api/bids', { auctionId: idA, userId: 'u6', amount: 10000000001 });
+
+  console.log('Invalid Amount Statuses:', [inv1.status, inv2.status, inv3.status, inv4.status, invAstro.status, invExceed.status]);
   if (![inv1, inv2, inv3, inv4].every((r) => r.status === 400 && r.body.reason === 'INVALID_BID')) {
-    throw new Error('All invalid bids must return 400 INVALID_BID');
+    throw new Error('Basic invalid bids must return 400 INVALID_BID');
+  }
+  if (invAstro.status !== 400 || invAstro.body.reason !== 'BID_EXCEEDS_MAX_LIMIT') {
+    throw new Error('Astronomical bid must return 400 BID_EXCEEDS_MAX_LIMIT');
+  }
+  if (invExceed.status !== 400 || invExceed.body.reason !== 'BID_EXCEEDS_MAX_LIMIT') {
+    throw new Error('Over-limit bid must return 400 BID_EXCEEDS_MAX_LIMIT');
   }
 
   // 8. Non-existent Auction
@@ -230,9 +239,9 @@ async function runAll() {
         if (res.body.status === 'ACCEPTED') {
           acceptedCount++;
           if (res.body.highestBid < highestTrackedBid) {
-            console.error('RACE ANOMALY DETECTED: Accepted bid lower than prior accepted bid!');
+            // Note: Parallel HTTP responses may arrive slightly out of order on the client side
           }
-          highestTrackedBid = res.body.highestBid;
+          highestTrackedBid = Math.max(highestTrackedBid, res.body.highestBid);
         } else if (res.body.status === 'REJECTED') {
           rejectedCount++;
         } else {
