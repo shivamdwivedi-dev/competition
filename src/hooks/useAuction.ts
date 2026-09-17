@@ -60,6 +60,7 @@ export function useAuction() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [lastBidError, setLastBidError] = useState<string | null>(null);
+  const [lastBidSuccess, setLastBidSuccess] = useState<string | null>(null);
   const [outbidAlert, setOutbidAlert] = useState<boolean>(false);
   const [highBidFlash, setHighBidFlash] = useState<boolean>(false);
 
@@ -242,14 +243,48 @@ export function useAuction() {
   // 4. Place Bid Action - Hot Path: POST /api/bids -> Redis Lua
   const submitBid = useCallback(
     async (customAmount?: number) => {
-      if (!auction || auction.status !== 'LIVE') return;
+      if (!auction || auction.status !== 'LIVE') {
+        setLastBidError('Auction is not live or has already concluded.');
+        return;
+      }
 
-      const minRequired = auction.currentHighestBid + auction.minIncrement;
+      const hasPreviousBids = Boolean(auction.totalBidsCount > 0 && auction.highestBidderId);
+      const minRequired = hasPreviousBids
+        ? auction.currentHighestBid + auction.minIncrement
+        : auction.startingPrice;
+
       const targetAmount = customAmount !== undefined ? customAmount : minRequired;
 
-      // Quick client-side check
-      if (targetAmount <= auction.currentHighestBid) {
+      // Validate numeric and positive
+      if (isNaN(targetAmount) || targetAmount <= 0) {
+        const errorMsg = 'Please enter a valid positive bid amount.';
+        setLastBidError(errorMsg);
+        soundFX.playBidOutbid();
+        setTimeout(() => setLastBidError(null), 4000);
+        return;
+      }
+
+      // Client-side quick check
+      if (hasPreviousBids && targetAmount <= auction.currentHighestBid) {
         const errorMsg = `Bid of ₹${targetAmount.toLocaleString()} rejected: Must strictly exceed current highest bid of ₹${auction.currentHighestBid.toLocaleString()}`;
+        setLastBidError(errorMsg);
+        soundFX.playBidOutbid();
+
+        const rejectedBid: Bid = {
+          id: `rej-${Date.now()}`,
+          auctionId: currentAuctionId,
+          bidderId: user.id,
+          bidderName: user.name,
+          amount: targetAmount,
+          timestamp: Date.now(),
+          status: 'REJECTED',
+          reason: 'BID_TOO_LOW',
+        };
+        setBids((prev) => [rejectedBid, ...prev.slice(0, 49)]);
+        setTimeout(() => setLastBidError(null), 3500);
+        return;
+      } else if (!hasPreviousBids && targetAmount < auction.startingPrice) {
+        const errorMsg = `Bid of ₹${targetAmount.toLocaleString()} rejected: Must be at least starting price of ₹${auction.startingPrice.toLocaleString()}`;
         setLastBidError(errorMsg);
         soundFX.playBidOutbid();
 
@@ -270,6 +305,7 @@ export function useAuction() {
 
       setIsSubmitting(true);
       setLastBidError(null);
+      setLastBidSuccess(null);
       const start = performance.now();
 
       try {
@@ -312,6 +348,8 @@ export function useAuction() {
           soundFX.playBidAccepted();
           setHighBidFlash(true);
           setTimeout(() => setHighBidFlash(false), 800);
+          setLastBidSuccess(`Bid of ₹${acceptedAmount.toLocaleString()} ACCEPTED! You lead the auction.`);
+          setTimeout(() => setLastBidSuccess(null), 4000);
           setTelemetry((prev) => ({ ...prev, averageLatencyMs: latency }));
         }
       } catch (err: any) {
@@ -348,6 +386,38 @@ export function useAuction() {
     [auction, currentAuctionId, user]
   );
 
+  // 5. Host / Create New Auction
+  const hostAuction = useCallback(
+    async (params: {
+      title: string;
+      startingPrice: number;
+      durationSeconds: number;
+      imageUrl?: string;
+      description?: string;
+    }) => {
+      setIsSubmitting(true);
+      try {
+        const newAuction = await apiService.createAuction(params);
+        // Refresh active list
+        const list = await apiService.listActiveAuctions();
+        setAvailableAuctions(list);
+
+        // Switch to newly created auction
+        socketService.leaveAuctionRoom(currentAuctionId);
+        setCurrentAuctionId(newAuction.id);
+        seenBidsRef.current.clear();
+        setAuction(newAuction);
+        setBids([]);
+        socketService.joinAuctionRoom(newAuction.id);
+        soundFX.playBidAccepted();
+        return newAuction;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [currentAuctionId]
+  );
+
   // Switch to another active auction
   const switchAuction = useCallback((newAuctionId: string) => {
     if (!newAuctionId || newAuctionId === currentAuctionId) return;
@@ -356,6 +426,7 @@ export function useAuction() {
     seenBidsRef.current.clear();
     setOutbidAlert(false);
     setLastBidError(null);
+    setLastBidSuccess(null);
     socketService.joinAuctionRoom(newAuctionId);
     refreshAuthoritativeAuction(newAuctionId);
   }, [currentAuctionId, refreshAuthoritativeAuction]);
@@ -369,6 +440,7 @@ export function useAuction() {
     });
     setOutbidAlert(false);
     setLastBidError(null);
+    setLastBidSuccess(null);
   }, []);
 
   return {
@@ -383,6 +455,7 @@ export function useAuction() {
     serverError,
     isSubmitting,
     lastBidError,
+    lastBidSuccess,
     outbidAlert,
     highBidFlash,
     setOutbidAlert,
@@ -391,5 +464,6 @@ export function useAuction() {
     switchUser,
     refreshAuthoritativeAuction,
     retryConnection,
+    hostAuction,
   };
 }

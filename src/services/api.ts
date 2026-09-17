@@ -77,6 +77,52 @@ export const apiService = {
     }
   },
 
+  // POST /api/auctions - Create and host a new auction on authoritative backend
+  async createAuction(params: {
+    title: string;
+    startingPrice: number;
+    durationSeconds: number;
+    imageUrl?: string;
+    description?: string;
+  }): Promise<AuctionItem> {
+    const res = await fetch(API_ROUTES.listAuctions(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: params.title.trim(),
+        startingPrice: Math.max(1, Number(params.startingPrice)),
+        durationSeconds: Math.max(30, Number(params.durationSeconds)),
+      }),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.error || `Failed to create auction (HTTP ${res.status})`);
+    }
+
+    const json = await res.json();
+    const created = json.data || json;
+    const auctionId = String(created.id || created._id);
+
+    // Save custom image and description in browser cache for display
+    if (params.imageUrl && auctionId) {
+      try {
+        localStorage.setItem(`auction_img_${auctionId}`, params.imageUrl);
+      } catch {}
+    }
+    if (params.description && auctionId) {
+      try {
+        localStorage.setItem(`auction_desc_${auctionId}`, params.description);
+      } catch {}
+    }
+
+    return this.normalizeAuction({
+      ...created,
+      imageUrl: params.imageUrl,
+      description: params.description,
+    });
+  },
+
   // GET /api/auctions/:id - Authoritative auction details from backend
   async getAuctionDetails(auctionId: string): Promise<AuctionItem> {
     try {
@@ -116,6 +162,14 @@ export const apiService = {
   },
 
   normalizeAuction(raw: any): AuctionItem {
+    const id = String(raw.id || raw.auctionId || '');
+    let cachedImg = '';
+    let cachedDesc = '';
+    try {
+      cachedImg = localStorage.getItem(`auction_img_${id}`) || '';
+      cachedDesc = localStorage.getItem(`auction_desc_${id}`) || '';
+    } catch {}
+
     const highestBid = Number(raw.highestBid ?? raw.highest_bid ?? raw.currentHighestBid ?? 0);
     const startingPrice = Number(raw.startingPrice ?? raw.starting_price ?? 500);
     const bidder = raw.highestBidder ?? raw.highest_bidder ?? null;
@@ -125,10 +179,10 @@ export const apiService = {
     const minIncrement = Number(raw.minIncrement ?? 50);
 
     return {
-      id: String(raw.id || raw.auctionId || ''),
+      id,
       title: String(raw.title || 'Auction Item'),
-      description: String(raw.description || 'Live bidding item managed atomically by Redis Lua script on Port 5001.'),
-      imageUrl: raw.imageUrl || 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?auto=format&fit=crop&w=1200&q=80',
+      description: String(raw.description || cachedDesc || 'Live bidding item managed atomically by Redis Lua script on Port 5001.'),
+      imageUrl: raw.imageUrl || cachedImg || 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?auto=format&fit=crop&w=1200&q=80',
       startingPrice,
       reservePrice: Number(raw.reservePrice || (startingPrice * 2)),
       minIncrement: minIncrement > 0 ? minIncrement : 50,

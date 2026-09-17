@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useAuction } from './hooks/useAuction';
 import { Navbar } from './components/Navbar';
 import { AuctionHeader } from './components/AuctionHeader';
@@ -6,7 +7,8 @@ import { BidForm } from './components/BidForm';
 import { LiveBidFeed } from './components/LiveBidFeed';
 import { SystemStatusCard } from './components/SystemStatusCard';
 import { WinnerModal } from './components/WinnerModal';
-import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
+import { HostAuctionModal } from './components/HostAuctionModal';
+import { AlertTriangle, Loader2, RefreshCw, Plus } from 'lucide-react';
 
 export function App() {
   const {
@@ -21,6 +23,7 @@ export function App() {
     serverError,
     isSubmitting,
     lastBidError,
+    lastBidSuccess,
     outbidAlert,
     highBidFlash,
     setOutbidAlert,
@@ -29,7 +32,10 @@ export function App() {
     switchUser,
     refreshAuthoritativeAuction,
     retryConnection,
+    hostAuction,
   } = useAuction();
+
+  const [isHostModalOpen, setIsHostModalOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-[#060b18] text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-slate-950 overflow-x-hidden relative">
@@ -48,6 +54,7 @@ export function App() {
         onSwitchAuction={switchAuction}
         onSwitchUser={switchUser}
         onRefresh={() => retryConnection()}
+        onOpenHostModal={() => setIsHostModalOpen(true)}
       />
 
       {/* Main Content */}
@@ -100,13 +107,23 @@ export function App() {
                 Auto-reconnecting every 3.5s
               </p>
             </div>
-            <button
-              onClick={() => retryConnection()}
-              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-mono text-sm font-bold transition-all cursor-pointer flex items-center gap-2.5 shadow-xl shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-[1.02] active:scale-95"
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span>Retry Now</span>
-            </button>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <button
+                onClick={() => retryConnection()}
+                className="px-6 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-mono text-sm font-bold transition-all cursor-pointer flex items-center gap-2.5 shadow-xl shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-[1.02] active:scale-95"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>Retry Now</span>
+              </button>
+
+              <button
+                onClick={() => setIsHostModalOpen(true)}
+                className="px-6 py-3 rounded-2xl glass hover:bg-white/10 border border-white/15 text-white font-mono text-sm font-bold transition-all cursor-pointer flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4 text-cyan-400" />
+                <span>Host an Auction</span>
+              </button>
+            </div>
           </div>
         ) : (
           <>
@@ -130,6 +147,7 @@ export function App() {
                   user={user}
                   isSubmitting={isSubmitting}
                   lastError={lastBidError}
+                  lastSuccess={lastBidSuccess}
                   onSubmitBid={submitBid}
                 />
               </div>
@@ -150,6 +168,13 @@ export function App() {
         )}
 
       </main>
+
+      {/* Host / Create Auction Modal */}
+      <HostAuctionModal
+        isOpen={isHostModalOpen}
+        onClose={() => setIsHostModalOpen(false)}
+        onAuctionCreated={hostAuction}
+      />
 
       {/* Winner Modal */}
       {auction && (
