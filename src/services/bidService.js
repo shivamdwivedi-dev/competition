@@ -5,13 +5,13 @@ const { broadcastBidUpdate } = require('../sockets/auctionSocket');
 
 async function processBid({ auctionId, userId, amount }) {
   // 1. Basic validation
-  if (!auctionId || typeof auctionId !== 'string') {
+  if (!auctionId || typeof auctionId !== 'string' || auctionId.trim() === '') {
     return {
       success: false,
       statusCode: 400,
       status: 'REJECTED',
       reason: 'INVALID_AUCTION_ID',
-      message: 'auctionId is required and must be a string',
+      message: 'auctionId is required and must be a non-empty string',
     };
   }
 
@@ -25,8 +25,18 @@ async function processBid({ auctionId, userId, amount }) {
     };
   }
 
+  if (typeof amount === 'boolean') {
+    return {
+      success: false,
+      statusCode: 400,
+      status: 'REJECTED',
+      reason: 'INVALID_BID',
+      message: 'amount must be a valid positive number',
+    };
+  }
+
   const numAmount = Number(amount);
-  if (isNaN(numAmount) || numAmount <= 0) {
+  if (isNaN(numAmount) || !isFinite(numAmount) || numAmount <= 0) {
     return {
       success: false,
       statusCode: 400,
@@ -38,7 +48,8 @@ async function processBid({ auctionId, userId, amount }) {
 
   const bidId = uuidv4();
   const now = Date.now();
-  const auctionKey = `auction:${auctionId}`;
+  const cleanAuctionId = auctionId.trim();
+  const auctionKey = `auction:${cleanAuctionId}`;
 
   try {
     // 2. Execute Atomic Redis Lua Script

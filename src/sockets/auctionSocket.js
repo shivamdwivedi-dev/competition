@@ -4,27 +4,19 @@ function initSocketIO(io) {
   ioInstance = io;
 
   io.on('connection', (socket) => {
-    console.log(`[Socket.IO] Client connected: ${socket.id}`);
-
     // Join auction room to receive live updates
     socket.on('join:auction', (auctionId) => {
-      if (!auctionId) return;
-      const room = `auction:${auctionId}`;
+      if (!auctionId || typeof auctionId !== 'string') return;
+      const room = `auction:${auctionId.trim()}`;
       socket.join(room);
-      console.log(`[Socket.IO] Socket ${socket.id} joined room ${room}`);
       socket.emit('joined', { room, success: true });
     });
 
     // Leave auction room
     socket.on('leave:auction', (auctionId) => {
-      if (!auctionId) return;
-      const room = `auction:${auctionId}`;
+      if (!auctionId || typeof auctionId !== 'string') return;
+      const room = `auction:${auctionId.trim()}`;
       socket.leave(room);
-      console.log(`[Socket.IO] Socket ${socket.id} left room ${room}`);
-    });
-
-    socket.on('disconnect', (reason) => {
-      console.log(`[Socket.IO] Client disconnected: ${socket.id} (${reason})`);
     });
   });
 }

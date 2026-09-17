@@ -7,8 +7,12 @@ async function createAuction({ title, startingPrice, durationSeconds, endTime })
     throw new Error('Title is required and must be a non-empty string');
   }
 
+  if (typeof startingPrice === 'boolean') {
+    throw new Error('startingPrice must be a non-negative number');
+  }
+
   const numStartingPrice = Number(startingPrice);
-  if (isNaN(numStartingPrice) || numStartingPrice < 0) {
+  if (isNaN(numStartingPrice) || !isFinite(numStartingPrice) || numStartingPrice < 0) {
     throw new Error('startingPrice must be a non-negative number');
   }
 
@@ -113,14 +117,9 @@ async function getAuction(auctionId) {
 
 async function listAuctions() {
   const auctionIds = await redis.smembers('active_auctions');
-  const results = [];
-
-  for (const id of auctionIds) {
-    const auction = await getAuction(id);
-    if (auction) {
-      results.push(auction);
-    }
-  }
+  const auctionPromises = auctionIds.map((id) => getAuction(id));
+  const rawResults = await Promise.all(auctionPromises);
+  const results = rawResults.filter(Boolean);
 
   // Sort by active first, then closest end time
   results.sort((a, b) => {
