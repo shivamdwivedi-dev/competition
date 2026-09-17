@@ -85,24 +85,28 @@ const SCENARIO_DEFS = {
 async function seedAuctionIfSupported(targetUrl, auctionId, overrides = {}) {
   try {
     const parsed = new URL(targetUrl);
-    const seedUrl = `${parsed.protocol}//${parsed.host}/api/bids/seed`;
-    const res = await fetch(seedUrl, {
+    const createUrl = `${parsed.protocol}//${parsed.host}/api/auctions`;
+    const res = await fetch(createUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        auctionId,
-        title: `Test ${auctionId}`,
-        highestBid: overrides.highestBid || 100,
-        status: overrides.status || 'active',
-        durationMs: overrides.durationMs || 3600000,
+        title: `QA Suite — ${auctionId}`,
+        startingPrice: overrides.highestBid || 100,
+        durationSeconds: overrides.status === 'ended' ? 1 : 1800,
       }),
     });
     if (res.ok) {
-      console.log(`[Suite Seed] Successfully initialized ${auctionId}`);
+      const json = await res.json();
+      if (json && json.data && json.data.id) {
+        if (overrides.status === 'ended') {
+          // Allow duration to expire for ended auction test
+          await new Promise((r) => setTimeout(r, 1200));
+        }
+        return json.data.id;
+      }
     }
-  } catch (e) {
-    // Seed endpoint optional if backend auto-seeds
-  }
+  } catch (e) {}
+  return null;
 }
 
 async function runScenario(scenarioKey, targetUrl, overrides = {}) {
@@ -115,15 +119,15 @@ async function runScenario(scenarioKey, targetUrl, overrides = {}) {
   console.log(`\n>>> STARTING: ${def.title} <<<`);
   console.log(`Purpose: ${def.description}`);
 
-  // Seed auction before running
-  await seedAuctionIfSupported(targetUrl, def.auctionId, {
+  // Provision isolated auction on real backend
+  const provisionedId = await seedAuctionIfSupported(targetUrl, def.auctionId, {
     highestBid: def.startingBid,
     status: def.scenario === 'auction-ended' ? 'ended' : 'active',
   });
 
   const options = {
     url: targetUrl,
-    auctionId: overrides.auctionId || def.auctionId,
+    auctionId: overrides.auctionId || provisionedId || def.auctionId,
     requests: overrides.requests || def.requests,
     concurrency: overrides.concurrency || def.concurrency,
     startingBid: overrides.startingBid || def.startingBid,
@@ -200,7 +204,7 @@ async function runAll(targetUrl, overrides = {}) {
 // ── CLI Dispatcher ──────────────────────────────────────────────────────────
 if (require.main === module) {
   const args = process.argv.slice(2);
-  const targetUrl = args.find((a, i) => args[i - 1] === '--url') || 'http://localhost:4000/api/bids';
+  const targetUrl = args.find((a, i) => args[i - 1] === '--url') || 'http://localhost:5001/api/bids';
   const scenarioArg = args.find((a, i) => args[i - 1] === '--scenario') || args[0] || 'all';
 
   if (scenarioArg === 'all') {

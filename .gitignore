@@ -30,3 +30,4 @@ Thumbs.db
 coverage/
 load-test-results/
 tester/reports/load-test-*
+dump.rdb

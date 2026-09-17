@@ -1,9 +1,9 @@
 {
-  "timestamp": "2026-09-17T14:51:58.984Z",
+  "timestamp": "2026-09-17T18:07:58.024Z",
   "scenario": "auction-ended",
   "config": {
-    "url": "http://localhost:4000/api/bids",
-    "auctionId": "auction-ended",
+    "url": "http://localhost:5001/api/bids",
+    "auctionId": "9199a7c4-3077-4698-8e1f-1696a8f4f796",
     "totalRequests": 100,
     "concurrency": 20
   },
@@ -15,22 +15,22 @@
     "errors": 0
   },
   "performance": {
-    "elapsedSeconds": 0.024,
-    "elapsedMs": 24.04,
-    "actualThroughputReqPerSec": 4160.22,
-    "avgLatencyMs": 4.37,
-    "minLatencyMs": 1.12,
-    "maxLatencyMs": 15.61,
-    "p50LatencyMs": 1.6,
-    "p95LatencyMs": 15.48,
-    "p99LatencyMs": 15.61,
+    "elapsedSeconds": 0.028,
+    "elapsedMs": 27.92,
+    "actualThroughputReqPerSec": 3582.09,
+    "avgLatencyMs": 5.37,
+    "minLatencyMs": 1.2,
+    "maxLatencyMs": 14.33,
+    "p50LatencyMs": 3.68,
+    "p95LatencyMs": 14.22,
+    "p99LatencyMs": 14.33,
     "successRatePct": 0,
     "rejectionRatePct": 100,
     "errorRatePct": 0
   },
   "verification": {
     "finalHighestBid": 100,
-    "finalHighestBidder": "",
+    "finalHighestBidder": null,
     "totalAcceptedUniqueBids": 0,
     "raceConditionAnomaliesCount": 0,
     "anomalies": [],

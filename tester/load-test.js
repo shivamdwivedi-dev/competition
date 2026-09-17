@@ -25,8 +25,8 @@ const { performance } = require('perf_hooks');
 // ── Parse CLI Arguments ──────────────────────────────────────────────────────
 function parseArgs(args) {
   const options = {
-    url: 'http://localhost:4000/api/bids',
-    auctionId: 'auction-1',
+    url: 'http://localhost:5001/api/bids',
+    auctionId: null, // Auto-provisions an isolated fresh auction when null
     requests: 100,
     concurrency: 10,
     startingBid: 100,
@@ -35,6 +35,7 @@ function parseArgs(args) {
     scenario: 'normal',
     reportDir: path.join(__dirname, 'reports'),
     quiet: false,
+    durationSeconds: 1800, // 30 minutes
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -160,7 +161,7 @@ function createDispatcher(targetUrl, concurrency) {
             outcome = 'REJECTED';
           } else if (res.statusCode >= 200 && res.statusCode < 300) {
             outcome = 'ACCEPTED';
-          } else if (res.statusCode === 400) {
+          } else if (res.statusCode === 400 || res.statusCode === 404 || res.statusCode === 409) {
             outcome = 'REJECTED';
           } else {
             outcome = 'ERROR';
@@ -200,9 +201,8 @@ function createDispatcher(targetUrl, concurrency) {
 
   function fetchState(auctionId) {
     return new Promise((resolve) => {
-      // Constructs GET /api/bids/:auctionId
-      const basePath = parsed.pathname.replace(/\/+$/, '');
-      const statePath = `${basePath}/${auctionId}`;
+      // Real backend uses GET /api/auctions/:auctionId
+      const statePath = `/api/auctions/${auctionId}`;
       const reqOptions = {
         protocol: parsed.protocol,
         hostname: parsed.hostname,
@@ -218,7 +218,17 @@ function createDispatcher(targetUrl, concurrency) {
         res.on('data', (chunk) => { responseBody += chunk; });
         res.on('end', () => {
           try {
-            resolve(JSON.parse(responseBody));
+            const json = JSON.parse(responseBody);
+            const auctionData = (json && json.data) ? json.data : json;
+            if (auctionData) {
+              if (auctionData.currentBid !== undefined && auctionData.highestBid === undefined) {
+                auctionData.highestBid = auctionData.currentBid;
+              }
+              if (auctionData.currentBidder !== undefined && auctionData.highestBidder === undefined) {
+                auctionData.highestBidder = auctionData.currentBidder;
+              }
+            }
+            resolve(auctionData);
           } catch (e) {
             resolve(null);
           }
@@ -244,9 +254,11 @@ function generatePayloads(options) {
       for (let i = 0; i < requests; i++) {
         // Interleave small and medium increments
         const amount = startingBid + (i % 2 === 0 ? i + 1 : i);
+        const user = `${userPrefix}-${(i % 10) + 1}`;
         payloads.push({
           auctionId,
-          bidderId: `${userPrefix}-${(i % 10) + 1}`,
+          userId: user,
+          bidderId: user,
           amount,
         });
       }
@@ -257,27 +269,28 @@ function generatePayloads(options) {
       // Systematically inject invalid and out-of-order bids
       for (let i = 0; i < requests; i++) {
         const type = i % 7;
+        const user = `${userPrefix}-${i}`;
         if (type === 0) {
           // Negative bid
-          payloads.push({ auctionId, bidderId: `${userPrefix}-${i}`, amount: -50 });
+          payloads.push({ auctionId, userId: user, bidderId: user, amount: -50 });
         } else if (type === 1) {
           // Zero bid
-          payloads.push({ auctionId, bidderId: `${userPrefix}-${i}`, amount: 0 });
+          payloads.push({ auctionId, userId: user, bidderId: user, amount: 0 });
         } else if (type === 2) {
           // Lower than starting
-          payloads.push({ auctionId, bidderId: `${userPrefix}-${i}`, amount: startingBid - 20 });
+          payloads.push({ auctionId, userId: user, bidderId: user, amount: startingBid - 20 });
         } else if (type === 3) {
           // Missing auctionId
-          payloads.push({ bidderId: `${userPrefix}-${i}`, amount: startingBid + 50 });
+          payloads.push({ userId: user, bidderId: user, amount: startingBid + 50 });
         } else if (type === 4) {
-          // Missing bidderId
+          // Missing userId / bidderId
           payloads.push({ auctionId, amount: startingBid + 50 });
         } else if (type === 5) {
           // Malformed amount (string)
-          payloads.push({ auctionId, bidderId: `${userPrefix}-${i}`, amount: 'invalid-number' });
+          payloads.push({ auctionId, userId: user, bidderId: user, amount: 'invalid-number' });
         } else {
           // Legitimate bid
-          payloads.push({ auctionId, bidderId: `${userPrefix}-${i}`, amount: startingBid + i * bidIncrement });
+          payloads.push({ auctionId, userId: user, bidderId: user, amount: startingBid + i * bidIncrement });
         }
       }
       break;
@@ -286,9 +299,11 @@ function generatePayloads(options) {
     case 'auction-ended': {
       // All bids targeted to an ended auction
       for (let i = 0; i < requests; i++) {
+        const user = `${userPrefix}-${i}`;
         payloads.push({
           auctionId: options.auctionId || 'auction-ended',
-          bidderId: `${userPrefix}-${i}`,
+          userId: user,
+          bidderId: user,
           amount: startingBid + (i + 1) * bidIncrement,
         });
       }
@@ -302,9 +317,11 @@ function generatePayloads(options) {
       // Ascending competitive bidding
       for (let i = 0; i < requests; i++) {
         const amount = startingBid + (i + 1) * bidIncrement;
+        const user = `${userPrefix}-${(i % 50) + 1}`;
         payloads.push({
           auctionId,
-          bidderId: `${userPrefix}-${(i % 50) + 1}`,
+          userId: user,
+          bidderId: user,
           amount,
         });
       }
@@ -315,19 +332,59 @@ function generatePayloads(options) {
   return payloads;
 }
 
+// ── Real Backend Auction Provisioning Helper ─────────────────────────────────
+async function createDedicatedAuction(targetUrl, { title, startingPrice, durationSeconds }) {
+  try {
+    const parsed = new URL(targetUrl);
+    const createUrl = `${parsed.protocol}//${parsed.host}/api/auctions`;
+    const res = await fetch(createUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: title || `LOAD TEST DEDICATED AUCTION - ${new Date().toISOString()}`,
+        startingPrice: startingPrice || 100,
+        durationSeconds: durationSeconds || 1800, // 30 minutes
+      }),
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.data && json.data.id) {
+        return json.data.id;
+      }
+    }
+  } catch (err) {
+    // Graceful fallback if backend auto-create endpoint is not reachable
+  }
+  return null;
+}
+
 // ── Main Load Test Runner ────────────────────────────────────────────────────
 async function runLoadTest(options) {
-  const { url: targetUrl, auctionId, requests, concurrency, scenario } = options;
+  const { url: targetUrl, requests, concurrency, scenario } = options;
+
+  // Task 5: High-Load Simulator Isolation — Automatically provision fresh dedicated auction
+  let auctionId = options.auctionId;
+  if (!auctionId) {
+    const freshId = await createDedicatedAuction(targetUrl, {
+      title: `SYNORA Dedicated Load Test — ${scenario.toUpperCase()}`,
+      startingPrice: options.startingBid || 100,
+      durationSeconds: options.durationSeconds || 1800,
+    });
+    auctionId = freshId || `auction-isolated-${Date.now()}`;
+    options.auctionId = auctionId;
+  }
 
   console.log(`\n========================================`);
   console.log(`SYNORA AUCTION LOAD TEST — 4-WARRIORS`);
   console.log(`========================================`);
-  console.log(`Scenario:       ${scenario.toUpperCase()}`);
-  console.log(`Target URL:     ${targetUrl}`);
-  console.log(`Auction ID:     ${auctionId}`);
-  console.log(`Total Requests: ${requests}`);
-  console.log(`Concurrency:    ${concurrency}`);
-  console.log(`Start Time:     ${new Date().toISOString()}`);
+  console.log(`LOAD TEST AUCTION: ${auctionId}`);
+  console.log(`REQUESTS:          ${requests}`);
+  console.log(`CONCURRENCY:       ${concurrency}`);
+  console.log(`STARTING BID:      ₹${options.startingBid}`);
+  console.log(`STATUS:            RUNNING`);
+  console.log(`Scenario:          ${scenario.toUpperCase()}`);
+  console.log(`Target URL:        ${targetUrl}`);
+  console.log(`Start Time:        ${new Date().toISOString()}`);
   console.log(`========================================\n`);
 
   const dispatcher = createDispatcher(targetUrl, concurrency);
@@ -411,11 +468,13 @@ async function runLoadTest(options) {
   // Filter and sort accepted bids by server timestamp to account for client network arrival jitter
   const acceptedBids = results
     .filter((r) => r.outcome === 'ACCEPTED' && r.data)
-    .map((r) => ({
-      amount: parseFloat(r.data.highestBid || r.sentPayload.amount),
-      bidder: r.data.highestBidder || r.sentPayload.bidderId,
-      ts: r.data.ts || 0,
-    }))
+    .map((r) => {
+      const d = r.data.data || r.data;
+      const amount = parseFloat(d.currentBid || (d.bid && d.bid.amount) || d.highestBid || r.sentPayload.amount);
+      const bidder = (d.bid && d.bid.userId) || d.currentBidder || d.highestBidder || r.sentPayload.userId || r.sentPayload.bidderId;
+      const ts = (d.bid && d.bid.createdAt ? new Date(d.bid.createdAt).getTime() : 0) || d.timestamp || d.ts || 0;
+      return { amount, bidder, ts };
+    })
     .sort((a, b) => (a.ts === b.ts ? a.amount - b.amount : a.ts - b.ts));
 
   let currentServerHighest = 0;

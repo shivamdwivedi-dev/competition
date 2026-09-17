@@ -10,7 +10,7 @@
 const http = require('http');
 const url = require('url');
 
-const PORT = parseInt(process.env.PORT, 10) || 4000;
+const PORT = parseInt(process.env.PORT, 10) || 5001;
 const SIMULATE_RACE_BUG = process.argv.includes('--race-bug');
 
 // In-memory state store mimicking Redis hashes
@@ -37,6 +37,12 @@ function seedAuction(auctionId, overrides = {}) {
 
 // Pre-seed default auction
 seedAuction('auction-1', { highestBid: 100, highestBidder: 'seed-bot' });
+seedAuction('8281326b-58ca-4f4a-9bb2-845927b0667a', {
+  title: 'Real Auction Demo',
+  startingPrice: 500,
+  highestBid: 500,
+  highestBidder: 'initial_bidder',
+});
 seedAuction('auction-stress', { highestBid: 100, highestBidder: 'seed-bot' });
 seedAuction('auction-race', { highestBid: 100, highestBidder: 'seed-bot' });
 seedAuction('auction-ended', {
@@ -130,6 +136,16 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, auction);
   }
 
+  // GET /api/auctions/:id (Matches real backend)
+  if (method === 'GET' && pathname.startsWith('/api/auctions/')) {
+    const auctionId = pathname.replace('/api/auctions/', '');
+    const auction = auctions.get(auctionId);
+    if (!auction) {
+      return sendJson(res, 404, { success: false, error: 'Auction not found' });
+    }
+    return sendJson(res, 200, { success: true, data: auction });
+  }
+
   // POST /api/bids — Atomic Bid Validation (Simulates Redis Lua)
   if (method === 'POST' && (pathname === '/api/bids' || pathname === '/api/bids/')) {
     let body;
@@ -139,14 +155,16 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 400, { status: 'REJECTED', message: 'Malformed JSON payload' });
     }
 
-    const { auctionId, bidderId, amount } = body;
+    const auctionId = body.auctionId;
+    const userId = body.userId || body.bidderId;
+    const amount = body.amount;
 
     // 1. Basic validation
     if (!auctionId || typeof auctionId !== 'string') {
       return sendJson(res, 400, { status: 'REJECTED', message: 'auctionId is required' });
     }
-    if (!bidderId || typeof bidderId !== 'string') {
-      return sendJson(res, 400, { status: 'REJECTED', message: 'bidderId is required' });
+    if (!userId || typeof userId !== 'string') {
+      return sendJson(res, 400, { status: 'REJECTED', message: 'userId is required' });
     }
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
@@ -230,32 +248,38 @@ const server = http.createServer(async (req, res) => {
     // 5. Highest bid comparison
     const minBid = auction.highestBid + 1;
     if (numAmount < minBid) {
-      return sendJson(res, 400, {
+      return sendJson(res, 409, {
+        success: false,
+        statusCode: 409,
         status: 'REJECTED',
+        reason: 'BID_TOO_LOW',
         message: `Bid too low — must be at least ${minBid}`,
         highestBid: auction.highestBid,
+        currentBid: auction.highestBid,
         highestBidder: auction.highestBidder,
         auctionId,
-        bidderId,
+        userId,
         amount: numAmount,
-        ts: nowMs,
+        timestamp: nowMs,
       });
     }
 
     // 6. Atomic state update
     auction.highestBid = numAmount;
-    auction.highestBidder = bidderId;
+    auction.highestBidder = userId;
     auction.bidCount++;
 
     return sendJson(res, 200, {
+      success: true,
+      statusCode: 200,
       status: 'ACCEPTED',
       message: 'Bid accepted',
       highestBid: auction.highestBid,
       highestBidder: auction.highestBidder,
       auctionId,
-      bidderId,
+      userId,
       amount: numAmount,
-      ts: nowMs,
+      timestamp: nowMs,
     });
   }
 
