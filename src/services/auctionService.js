@@ -2,16 +2,41 @@ const { v4: uuidv4 } = require('uuid');
 const redis = require('../config/redis');
 const { persistAuction, inMemoryStore } = require('../config/db');
 
-async function createAuction({ title, startingPrice, durationSeconds, endTime }) {
-  if (!title || typeof title !== 'string' || title.trim() === '') {
-    throw new Error('Title is required and must be a non-empty string');
+async function createAuction(payload) {
+  const {
+    title,
+    name,
+    itemName,
+    startingPrice,
+    starting_price,
+    price,
+    initialPrice,
+    durationSeconds,
+    duration,
+    durationMinutes,
+    endTime,
+    imageUrl,
+    image,
+    description,
+    createdBy,
+    userId,
+    hostId,
+  } = payload || {};
+
+  const itemTitle = (title || name || itemName || '').toString().trim();
+  if (!itemTitle) {
+    throw new Error('Title or name is required and must be a non-empty string');
   }
 
-  if (typeof startingPrice === 'boolean') {
+  const rawStartingPrice = startingPrice !== undefined
+    ? startingPrice
+    : (starting_price !== undefined ? starting_price : (price !== undefined ? price : initialPrice));
+
+  if (typeof rawStartingPrice === 'boolean') {
     throw new Error('startingPrice must be a non-negative number');
   }
 
-  const numStartingPrice = Number(startingPrice);
+  const numStartingPrice = Number(rawStartingPrice);
   if (isNaN(numStartingPrice) || !isFinite(numStartingPrice) || numStartingPrice < 0) {
     throw new Error('startingPrice must be a non-negative number');
   }
@@ -25,12 +50,20 @@ async function createAuction({ title, startingPrice, durationSeconds, endTime })
       throw new Error('endTime must be a valid future date/timestamp');
     }
   } else {
-    const duration = Number(durationSeconds) || 300; // Default 5 minutes
-    if (duration <= 0) {
-      throw new Error('durationSeconds must be greater than 0');
+    const rawDuration = durationSeconds !== undefined
+      ? durationSeconds
+      : (duration !== undefined ? duration : (durationMinutes !== undefined ? Number(durationMinutes) * 60 : 300));
+
+    const durSeconds = Number(rawDuration) || 300;
+    if (durSeconds <= 0) {
+      throw new Error('duration must be greater than 0');
     }
-    computedEndTime = now + duration * 1000;
+    computedEndTime = now + durSeconds * 1000;
   }
+
+  const finalImageUrl = (imageUrl || image || '').toString().trim();
+  const finalDesc = (description || '').toString().trim();
+  const finalHost = (createdBy || userId || hostId || 'anonymous').toString().trim();
 
   const auctionId = uuidv4();
   const auctionKey = `auction:${auctionId}`;
@@ -38,12 +71,15 @@ async function createAuction({ title, startingPrice, durationSeconds, endTime })
   // Store in Redis Hash
   await redis.hmset(auctionKey, {
     id: auctionId,
-    title: title.trim(),
+    title: itemTitle,
     starting_price: numStartingPrice.toString(),
     highest_bid: '0',
     highest_bidder: '',
     end_time: computedEndTime.toString(),
     created_at: now.toString(),
+    image_url: finalImageUrl,
+    description: finalDesc,
+    created_by: finalHost,
   });
 
   // Track auction in active set
@@ -51,14 +87,18 @@ async function createAuction({ title, startingPrice, durationSeconds, endTime })
 
   const auctionData = {
     id: auctionId,
-    title: title.trim(),
+    title: itemTitle,
+    name: itemTitle,
     startingPrice: numStartingPrice,
-    highestBid: 0,
+    highestBid: numStartingPrice,
     highestBidder: null,
     endTime: computedEndTime,
     createdAt: now,
     timeRemainingMs: Math.max(0, computedEndTime - now),
     isEnded: false,
+    imageUrl: finalImageUrl,
+    description: finalDesc,
+    createdBy: finalHost,
   };
 
   // Asynchronously persist to database
@@ -104,6 +144,7 @@ async function getAuction(auctionId) {
   return {
     id: data.id || auctionId,
     title: data.title,
+    name: data.title,
     startingPrice,
     highestBid: highestBid > 0 ? highestBid : startingPrice,
     highestBidder: data.highest_bidder || null,
@@ -111,6 +152,9 @@ async function getAuction(auctionId) {
     createdAt: parseInt(data.created_at, 10),
     timeRemainingMs: Math.max(0, endTime - now),
     isEnded: now >= endTime,
+    imageUrl: data.image_url || '',
+    description: data.description || '',
+    createdBy: data.created_by || '',
     recentBids,
   };
 }
