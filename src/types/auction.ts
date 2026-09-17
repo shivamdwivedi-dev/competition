@@ -25,6 +25,8 @@ export interface AuctionItem {
   endTime: number;
   status: 'UPCOMING' | 'LIVE' | 'ENDED' | 'PAUSED';
   totalBidsCount: number;
+  timeRemainingMs?: number;
+  isEnded?: boolean;
 }
 
 export interface SystemTelemetry {
@@ -39,4 +41,29 @@ export interface UserProfile {
   id: string;
   name: string;
   walletBalance: number;
+}
+
+export interface BackendBidResponse {
+  success: boolean;
+  statusCode?: number;
+  status: 'ACCEPTED' | 'REJECTED' | 'ERROR';
+  auctionId?: string;
+  highestBid?: number;
+  highestBidder?: string | null;
+  currentBid?: number;
+  timestamp?: number;
+  reason?: string;
+  message?: string;
+}
+
+export interface BackendAuctionSummary {
+  id: string;
+  title: string;
+  startingPrice: number;
+  highestBid: number;
+  highestBidder: string | null;
+  endTime: number;
+  createdAt: number;
+  timeRemainingMs: number;
+  isEnded: boolean;
 }

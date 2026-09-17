@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Clock, Flame } from 'lucide-react';
 
 interface CountdownTimerProps {
-  endTime: number;
+  endTime: number; // Milliseconds timestamp from backend
   status: 'UPCOMING' | 'LIVE' | 'ENDED' | 'PAUSED';
 }
 
@@ -17,7 +17,8 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ endTime, status 
 
   useEffect(() => {
     const calculateTime = () => {
-      const diff = Math.max(0, endTime - Date.now());
+      const now = Date.now();
+      const diff = Math.max(0, endTime - now);
       const hours = Math.floor(diff / (1000 * 60 * 60));
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
@@ -44,18 +45,18 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ endTime, status 
   }
 
   return (
-    <div className={`flex items-center space-x-3 px-3.5 py-1.5 rounded-xl border transition-all ${
+    <div className={`flex items-center space-x-2 sm:space-x-3 px-3 py-1.5 rounded-xl border transition-all ${
       isUrgent
         ? 'bg-rose-950/70 border-rose-600/80 text-rose-300 animate-pulse shadow-lg shadow-rose-900/30 ring-1 ring-rose-500/50'
         : 'bg-slate-900/90 border-slate-700/80 text-cyan-300'
     }`}>
       {isUrgent ? (
-        <Flame className="w-4 h-4 text-rose-400 animate-bounce" />
+        <Flame className="w-4 h-4 text-rose-400 animate-bounce flex-shrink-0" />
       ) : (
-        <Clock className="w-4 h-4 text-cyan-400" />
+        <Clock className="w-4 h-4 text-cyan-400 flex-shrink-0" />
       )}
 
-      <div className="flex items-center font-mono font-bold tracking-tight space-x-1 text-sm sm:text-base">
+      <div className="flex items-center font-mono font-bold tracking-tight space-x-0.5 sm:space-x-1 text-xs sm:text-base">
         {timeLeft.hours > 0 && (
           <>
             <span className="bg-slate-800/90 px-1.5 py-0.5 rounded text-white">{String(timeLeft.hours).padStart(2, '0')}</span>
@@ -70,7 +71,7 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ endTime, status 
       </div>
 
       {isUrgent && (
-        <span className="text-[10px] font-bold text-rose-400 uppercase tracking-widest hidden sm:inline">
+        <span className="text-[9px] sm:text-[10px] font-bold text-rose-400 uppercase tracking-widest hidden xs:inline">
           FINAL CALL
         </span>
       )}
