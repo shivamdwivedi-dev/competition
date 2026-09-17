@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Gavel, AlertCircle, Zap, CheckCircle2, ArrowUpRight, Loader2, Sparkles } from 'lucide-react';
 import type { AuctionItem, UserProfile } from '../types/auction';
+import { formatCurrency, formatCurrencyFull, MAX_SAFE_BID_AMOUNT } from '../utils/format';
 
 interface BidFormProps {
   auction: AuctionItem;
@@ -42,6 +43,10 @@ export const BidForm: React.FC<BidFormProps> = ({
   // Live client validation check
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
+    if (val.length > 15) {
+      setValidationError('Bid amount exceeds maximum allowed length (15 digits).');
+      return;
+    }
     setInputVal(val);
 
     if (!val || val.trim() === '') {
@@ -55,13 +60,18 @@ export const BidForm: React.FC<BidFormProps> = ({
       return;
     }
 
+    if (num > MAX_SAFE_BID_AMOUNT) {
+      setValidationError(`Bid exceeds maximum allowable system limit (₹10,000 Cr).`);
+      return;
+    }
+
     if (hasPreviousBids && num <= auction.currentHighestBid) {
-      setValidationError(`Must be strictly greater than current highest bid of ₹${auction.currentHighestBid.toLocaleString()}`);
+      setValidationError(`Must be strictly greater than current highest bid of ${formatCurrency(auction.currentHighestBid)}`);
       return;
     }
 
     if (!hasPreviousBids && num < auction.startingPrice) {
-      setValidationError(`Must be at least the starting price of ₹${auction.startingPrice.toLocaleString()}`);
+      setValidationError(`Must be at least the starting price of ${formatCurrency(auction.startingPrice)}`);
       return;
     }
 
@@ -83,13 +93,18 @@ export const BidForm: React.FC<BidFormProps> = ({
       return;
     }
 
+    if (val > MAX_SAFE_BID_AMOUNT) {
+      setValidationError(`Bid exceeds maximum allowable system limit (₹10,000 Cr).`);
+      return;
+    }
+
     if (hasPreviousBids && val <= auction.currentHighestBid) {
-      setValidationError(`Bid must strictly exceed ₹${auction.currentHighestBid.toLocaleString()}`);
+      setValidationError(`Bid must strictly exceed ${formatCurrency(auction.currentHighestBid)}`);
       return;
     }
 
     if (!hasPreviousBids && val < auction.startingPrice) {
-      setValidationError(`Bid must be at least ₹${auction.startingPrice.toLocaleString()}`);
+      setValidationError(`Bid must be at least ${formatCurrency(auction.startingPrice)}`);
       return;
     }
 
@@ -136,15 +151,15 @@ export const BidForm: React.FC<BidFormProps> = ({
       </div>
 
       {/* Benchmark summary banner */}
-      <div className="relative p-3.5 rounded-2xl glass border border-white/8 flex flex-wrap items-center justify-between gap-2">
-        <div className="text-xs font-mono">
+      <div className="relative p-3.5 rounded-2xl glass border border-white/8 flex flex-wrap items-center justify-between gap-2 min-w-0">
+        <div className="text-xs font-mono min-w-0 truncate max-w-full">
           <span className="text-slate-400">Current highest bid: </span>
-          <strong className="text-white text-sm">
-            {hasPreviousBids ? `₹${auction.currentHighestBid.toLocaleString()}` : `₹${auction.startingPrice.toLocaleString()} (Start)`}
+          <strong className="text-white text-sm" title={formatCurrencyFull(hasPreviousBids ? auction.currentHighestBid : auction.startingPrice)}>
+            {hasPreviousBids ? formatCurrency(auction.currentHighestBid) : `${formatCurrency(auction.startingPrice)} (Start)`}
           </strong>
         </div>
-        <div className="text-[11px] font-mono text-cyan-300 bg-cyan-500/10 border border-cyan-400/25 px-2.5 py-1 rounded-full">
-          <span>Min next bid: <strong>₹{minNextBid.toLocaleString()}</strong></span>
+        <div className="text-[11px] font-mono text-cyan-300 bg-cyan-500/10 border border-cyan-400/25 px-2.5 py-1 rounded-full flex-shrink-0" title={formatCurrencyFull(minNextBid)}>
+          <span>Min next bid: <strong>{formatCurrency(minNextBid)}</strong></span>
         </div>
       </div>
 
@@ -258,7 +273,7 @@ export const BidForm: React.FC<BidFormProps> = ({
           }`}
         >
           <Zap className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300" />
-          <span>1-Click Minimum Next Bid: <strong>₹{minNextBid.toLocaleString()}</strong></span>
+          <span>1-Click Minimum Next Bid: <strong title={formatCurrencyFull(minNextBid)}>{formatCurrency(minNextBid)}</strong></span>
         </button>
 
         {/* Quick Increment Shortcut Pills */}

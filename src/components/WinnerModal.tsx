@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Award, CheckCircle2, RefreshCw, Trophy, X, Eye } from 'lucide-react';
 import type { AuctionItem, UserProfile } from '../types/auction';
+import { formatCurrency, formatCurrencyFull } from '../utils/format';
 
 interface WinnerModalProps {
   auction: AuctionItem;
@@ -85,7 +86,7 @@ export const WinnerModal: React.FC<WinnerModalProps> = ({
         <div className="p-4 sm:p-5 rounded-2xl glass border border-white/8 space-y-3 text-left text-xs font-mono">
           {[
             { label: 'Winner', value: auction.highestBidderName || 'None', valueClass: 'text-cyan-300 font-bold' },
-            { label: 'Final Price', value: `₹${auction.currentHighestBid.toLocaleString()}`, valueClass: 'text-emerald-300 font-black text-sm' },
+            { label: 'Final Price', value: formatCurrency(auction.currentHighestBid), valueClass: 'text-emerald-300 font-black text-sm' },
             { label: 'Total Bids', value: String(auction.totalBidsCount), valueClass: 'text-indigo-300 font-bold' },
           ].map(({ label, value, valueClass }) => (
             <div key={label} className="flex justify-between items-center">

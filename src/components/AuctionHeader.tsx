@@ -2,6 +2,7 @@ import React from 'react';
 import { Tag, Shield, Zap, Flame } from 'lucide-react';
 import type { AuctionItem } from '../types/auction';
 import { CountdownTimer } from './CountdownTimer';
+import { formatCurrency, formatCurrencyFull } from '../utils/format';
 
 interface AuctionHeaderProps {
   auction: AuctionItem;
@@ -72,7 +73,7 @@ export const AuctionHeader: React.FC<AuctionHeaderProps> = ({ auction }) => {
           <div className="flex items-center gap-3 text-[11px] sm:text-xs font-mono glass border border-white/5 text-slate-400 px-3 py-2 rounded-xl">
             <div className="flex items-center gap-1.5">
               <Tag className="w-3 h-3 text-cyan-400" />
-              <span>Start: <strong className="text-white">₹{auction.startingPrice.toLocaleString()}</strong></span>
+              <span>Start: <strong className="text-white" title={formatCurrencyFull(auction.startingPrice)}>{formatCurrency(auction.startingPrice)}</strong></span>
             </div>
             <div className="w-px h-4 bg-white/10" />
             <span>Bids: <strong className="text-cyan-400">{auction.totalBidsCount}</strong></span>

@@ -3,6 +3,7 @@ import type { AuctionItem, Bid, SystemTelemetry, UserProfile, BackendAuctionSumm
 import { apiService, BackendError } from '../services/api';
 import { socketService, SOCKET_EVENTS, type BidUpdatePayload } from '../services/socket';
 import { soundFX } from '../utils/audio';
+import { MAX_SAFE_BID_AMOUNT } from '../utils/format';
 
 const INITIAL_USER: UserProfile = {
   id: 'user_piyush',
@@ -258,6 +259,14 @@ export function useAuction() {
       // Validate numeric and positive
       if (isNaN(targetAmount) || targetAmount <= 0) {
         const errorMsg = 'Please enter a valid positive bid amount.';
+        setLastBidError(errorMsg);
+        soundFX.playBidOutbid();
+        setTimeout(() => setLastBidError(null), 4000);
+        return;
+      }
+
+      if (targetAmount > MAX_SAFE_BID_AMOUNT) {
+        const errorMsg = 'Bid exceeds maximum allowable system limit (₹10,000 Cr).';
         setLastBidError(errorMsg);
         soundFX.playBidOutbid();
         setTimeout(() => setLastBidError(null), 4000);

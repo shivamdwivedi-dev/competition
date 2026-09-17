@@ -1,6 +1,7 @@
 import React from 'react';
 import { History, ArrowUpRight, Zap, CheckCircle2, XCircle } from 'lucide-react';
 import type { Bid } from '../types/auction';
+import { formatCurrency, formatCurrencyFull } from '../utils/format';
 
 interface LiveBidFeedProps {
   bids: Bid[];
@@ -119,12 +120,15 @@ export const LiveBidFeed: React.FC<LiveBidFeedProps> = ({ bids, currentUserId })
                 </div>
 
                 {/* Right: Amount + Status */}
-                <div className="text-right flex-shrink-0">
-                  <div className={`flex items-center gap-1 justify-end font-mono font-bold text-xs sm:text-sm ${
-                    isRejected ? 'text-rose-400 line-through opacity-60' : 'text-white'
-                  }`}>
-                    <span>₹{(bid.amount || 0).toLocaleString()}</span>
-                    {!isRejected && <ArrowUpRight className="w-3 h-3 text-cyan-400" />}
+                <div className="text-right flex-shrink-0 max-w-[120px] sm:max-w-[150px]">
+                  <div
+                    title={formatCurrencyFull(bid.amount)}
+                    className={`flex items-center gap-1 justify-end font-mono font-bold text-xs sm:text-sm truncate ${
+                      isRejected ? 'text-rose-400 line-through opacity-60' : 'text-white'
+                    }`}
+                  >
+                    <span className="truncate">{formatCurrency(bid.amount)}</span>
+                    {!isRejected && <ArrowUpRight className="w-3 h-3 text-cyan-400 flex-shrink-0" />}
                   </div>
                   <div className="flex items-center gap-0.5 justify-end mt-0.5">
                     {bid.status === 'ACCEPTED' ? (

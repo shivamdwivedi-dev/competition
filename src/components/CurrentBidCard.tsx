@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trophy, TrendingUp, AlertTriangle, UserCheck, ShieldAlert } from 'lucide-react';
 import type { AuctionItem, UserProfile } from '../types/auction';
+import { formatCurrency, formatCurrencyFull, formatPercentageIncrease } from '../utils/format';
 
 interface CurrentBidCardProps {
   auction: AuctionItem;
@@ -116,17 +117,20 @@ export const CurrentBidCard: React.FC<CurrentBidCardProps> = ({
 
       {/* Big Price */}
       <div className="relative mt-5 sm:mt-6 flex flex-wrap items-baseline justify-between gap-2">
-        <div className="flex items-baseline gap-2 min-w-0">
-          <span className="text-4xl sm:text-6xl lg:text-7xl font-black font-mono tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-100 to-cyan-300 leading-none">
-            ₹{auction.currentHighestBid.toLocaleString()}
+        <div className="flex items-baseline gap-2 min-w-0 max-w-full">
+          <span
+            title={formatCurrencyFull(auction.currentHighestBid)}
+            className="text-3xl sm:text-5xl lg:text-6xl font-black font-mono tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-100 to-cyan-300 leading-none truncate max-w-full"
+          >
+            {formatCurrency(auction.currentHighestBid)}
           </span>
-          <span className="text-xs sm:text-sm font-mono text-slate-500 uppercase pb-1">INR</span>
+          <span className="text-xs sm:text-sm font-mono text-slate-500 uppercase pb-1 flex-shrink-0">INR</span>
         </div>
 
-        <div className="text-right">
+        <div className="text-right flex-shrink-0">
           <div className="flex items-center gap-1 text-emerald-400 text-xs font-mono font-semibold justify-end">
             <TrendingUp className="w-3.5 h-3.5" />
-            <span>+{Math.round(((auction.currentHighestBid - auction.startingPrice) / (auction.startingPrice || 1)) * 100)}%</span>
+            <span>{formatPercentageIncrease(auction.currentHighestBid, auction.startingPrice)}</span>
           </div>
           <span className="text-[10px] text-slate-500 font-mono">vs starting price</span>
         </div>
@@ -135,13 +139,13 @@ export const CurrentBidCard: React.FC<CurrentBidCardProps> = ({
       {/* Stats Row */}
       <div className="relative mt-5 pt-4 border-t border-white/5 grid grid-cols-3 gap-2 sm:gap-3 text-center text-xs font-mono">
         {[
-          { label: 'Start Price', value: `₹${auction.startingPrice.toLocaleString()}`, color: 'text-slate-300' },
-          { label: 'Min Next Bid', value: `₹${(auction.currentHighestBid + auction.minIncrement).toLocaleString()}`, color: 'text-cyan-300' },
-          { label: 'Total Bids', value: String(auction.totalBidsCount), color: 'text-indigo-300' },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="p-2.5 sm:p-3 rounded-2xl glass border border-white/5">
-            <span className="text-slate-500 block text-[9px] sm:text-[10px] uppercase tracking-wide">{label}</span>
-            <span className={`${color} font-bold text-[11px] sm:text-sm mt-0.5 block`}>{value}</span>
+          { label: 'Start Price', value: formatCurrency(auction.startingPrice), full: formatCurrencyFull(auction.startingPrice), color: 'text-slate-300' },
+          { label: 'Min Next Bid', value: formatCurrency(auction.currentHighestBid + auction.minIncrement), full: formatCurrencyFull(auction.currentHighestBid + auction.minIncrement), color: 'text-cyan-300' },
+          { label: 'Total Bids', value: String(auction.totalBidsCount), full: String(auction.totalBidsCount), color: 'text-indigo-300' },
+        ].map(({ label, value, full, color }) => (
+          <div key={label} className="p-2.5 sm:p-3 rounded-2xl glass border border-white/5 min-w-0 overflow-hidden" title={full}>
+            <span className="text-slate-500 block text-[9px] sm:text-[10px] uppercase tracking-wide truncate">{label}</span>
+            <span className={`${color} font-bold text-[11px] sm:text-sm mt-0.5 block truncate`}>{value}</span>
           </div>
         ))}
       </div>
