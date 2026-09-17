@@ -1,24 +1,57 @@
-import React from 'react';
-import { Award, CheckCircle2, RefreshCw, Trophy } from 'lucide-react';
+import React, { useState } from 'react';
+import { Award, CheckCircle2, RefreshCw, Trophy, X, Eye } from 'lucide-react';
 import type { AuctionItem, UserProfile } from '../types/auction';
 
 interface WinnerModalProps {
   auction: AuctionItem;
   user: UserProfile;
-  onReset: () => void;
+  isOpen: boolean;
+  onClose: () => void;
+  onReset: () => void | Promise<any>;
 }
 
-export const WinnerModal: React.FC<WinnerModalProps> = ({ auction, user, onReset }) => {
-  if (auction.status !== 'ENDED') return null;
+export const WinnerModal: React.FC<WinnerModalProps> = ({
+  auction,
+  user,
+  isOpen,
+  onClose,
+  onReset,
+}) => {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  if (!isOpen || auction.status !== 'ENDED') return null;
   const isUserWinner = auction.highestBidderId === user.id;
+
+  const handleRefreshClick = async () => {
+    setIsRefreshing(true);
+    try {
+      await onReset();
+    } finally {
+      setIsRefreshing(false);
+      onClose();
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-md transition-opacity cursor-pointer"
+        onClick={onClose}
+      />
 
-      {/* Modal */}
-      <div className="relative w-full max-w-md rounded-3xl glass-strong p-6 sm:p-8 shadow-2xl shadow-black/60 text-center space-y-5 border border-white/10">
+      {/* Modal Card */}
+      <div className="relative w-full max-w-md rounded-3xl glass-strong p-6 sm:p-8 shadow-2xl shadow-black/80 text-center space-y-5 border border-white/10 z-10">
+        
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          title="Close and return to auction page"
+          className="absolute top-5 right-5 p-2 rounded-xl glass hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
         {/* Decorative top glow */}
         {isUserWinner && (
           <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 bg-amber-400/20 rounded-full blur-3xl pointer-events-none" />
@@ -51,13 +84,13 @@ export const WinnerModal: React.FC<WinnerModalProps> = ({ auction, user, onReset
         {/* Result Card */}
         <div className="p-4 sm:p-5 rounded-2xl glass border border-white/8 space-y-3 text-left text-xs font-mono">
           {[
-            { label: 'Winner', value: auction.highestBidderName || 'None', valueClass: 'text-cyan-300' },
-            { label: 'Final Price', value: `₹${auction.currentHighestBid.toLocaleString()}`, valueClass: 'text-emerald-300 font-black' },
-            { label: 'Total Bids', value: String(auction.totalBidsCount), valueClass: 'text-indigo-300' },
+            { label: 'Winner', value: auction.highestBidderName || 'None', valueClass: 'text-cyan-300 font-bold' },
+            { label: 'Final Price', value: `₹${auction.currentHighestBid.toLocaleString()}`, valueClass: 'text-emerald-300 font-black text-sm' },
+            { label: 'Total Bids', value: String(auction.totalBidsCount), valueClass: 'text-indigo-300 font-bold' },
           ].map(({ label, value, valueClass }) => (
             <div key={label} className="flex justify-between items-center">
               <span className="text-slate-500">{label}</span>
-              <span className={`${valueClass} font-bold truncate max-w-[180px] text-right`}>{value}</span>
+              <span className={`${valueClass} truncate max-w-[180px] text-right`}>{value}</span>
             </div>
           ))}
         </div>
@@ -68,14 +101,28 @@ export const WinnerModal: React.FC<WinnerModalProps> = ({ auction, user, onReset
           <span>Settled via Redis Atomic Lua Script</span>
         </div>
 
-        {/* CTA */}
-        <button
-          onClick={onReset}
-          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-sm flex items-center justify-center gap-2.5 transition-all hover:shadow-lg hover:shadow-indigo-500/30 active:scale-95 cursor-pointer min-h-[48px]"
-        >
-          <RefreshCw className="w-4 h-4" />
-          <span>Refresh Auction State</span>
-        </button>
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-3.5 rounded-2xl glass hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white font-mono text-xs font-bold transition-all cursor-pointer min-h-[48px] flex items-center justify-center gap-2"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span>View Auction UI</span>
+          </button>
+
+          <button
+            type="button"
+            disabled={isRefreshing}
+            onClick={handleRefreshClick}
+            className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-mono text-xs font-bold flex items-center justify-center gap-2 transition-all hover:shadow-lg hover:shadow-indigo-500/30 active:scale-95 cursor-pointer min-h-[48px] disabled:opacity-60"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>{isRefreshing ? 'Refreshing...' : 'Refresh Auction State'}</span>
+          </button>
+        </div>
+
       </div>
     </div>
   );

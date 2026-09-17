@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuction } from './hooks/useAuction';
 import { Navbar } from './components/Navbar';
 import { AuctionHeader } from './components/AuctionHeader';
@@ -36,6 +36,40 @@ export function App() {
   } = useAuction();
 
   const [isHostModalOpen, setIsHostModalOpen] = useState(false);
+
+  // Track whether the end-of-auction winner modal is open
+  const [isWinnerModalOpen, setIsWinnerModalOpen] = useState(false);
+  const dismissedModalAuctionIdRef = useRef<string | null>(null);
+
+  // Auto-open winner modal when auction ends (unless dismissed by user for this auction ID)
+  useEffect(() => {
+    if (!auction) return;
+    if (auction.status === 'ENDED') {
+      if (dismissedModalAuctionIdRef.current !== auction.id) {
+        setIsWinnerModalOpen(true);
+      }
+    } else {
+      // If currently LIVE, reset dismissed flag so it triggers when it ends
+      if (dismissedModalAuctionIdRef.current === auction.id) {
+        dismissedModalAuctionIdRef.current = null;
+      }
+    }
+  }, [auction?.status, auction?.id]);
+
+  const handleCloseWinnerModal = () => {
+    if (auction) {
+      dismissedModalAuctionIdRef.current = auction.id;
+    }
+    setIsWinnerModalOpen(false);
+  };
+
+  const handleRefreshAuctionState = async () => {
+    if (auction) {
+      dismissedModalAuctionIdRef.current = auction.id;
+    }
+    setIsWinnerModalOpen(false);
+    await refreshAuthoritativeAuction(currentAuctionId);
+  };
 
   return (
     <div className="min-h-screen bg-[#060b18] text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-slate-950 overflow-x-hidden relative">
@@ -141,6 +175,7 @@ export function App() {
                   highBidFlash={highBidFlash}
                   outbidAlert={outbidAlert}
                   onDismissAlert={() => setOutbidAlert(false)}
+                  onOpenWinnerModal={() => setIsWinnerModalOpen(true)}
                 />
                 <BidForm
                   auction={auction}
@@ -181,7 +216,9 @@ export function App() {
         <WinnerModal
           auction={auction}
           user={user}
-          onReset={() => refreshAuthoritativeAuction(currentAuctionId)}
+          isOpen={isWinnerModalOpen}
+          onClose={handleCloseWinnerModal}
+          onReset={handleRefreshAuctionState}
         />
       )}
 
